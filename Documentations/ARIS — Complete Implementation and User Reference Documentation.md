@@ -12,7 +12,7 @@
 **AI Layer:** Agentic AI / LLM / RAG  
 **Deployment Model:** Docker-first, Docker Hub, AWS-ready
 **Development Model:** Vertical-slice development — Angular UI and backend developed together from Phase 1
-**Identity:** IdentitySvc introduced as a foundational Phase-1 service
+**Identity:** IdentityService introduced as a foundational Phase-1 service
 
 ---
 
@@ -588,7 +588,7 @@ ARIS should support multiple source types.
 
 # 18. Data Ingestion
 
-DataIngestSvc should support:
+DataIngestService should support:
 
 ### API ingestion
 
@@ -671,7 +671,7 @@ Patient
 
 # 22. HCC Mapping Service
 
-HccMappingSvc provides version-aware mapping.
+HccMappingService provides version-aware mapping.
 
 The service must support:
 
@@ -740,31 +740,31 @@ Explanation & Evidence
 
 The selected model, payment year, segment, coefficients, normalization/factors, and other model-specific rules must be explicitly versioned. A RAF score must never be presented without identifying the model/version under which it was calculated.
 
-### RafCalculationSvc
+### RafCalculationService
 
-ARIS should introduce a dedicated `RafCalculationSvc`.
+ARIS should introduce a dedicated `RafCalculationService`.
 
-This service should be separate from `GapEngineSvc`.
+This service should be separate from `GapEngineService`.
 
-**GapEngineSvc** answers:
+**GapEngineService** answers:
 
 > Which potential risk-adjustment opportunities or gaps should be reviewed?
 
-**RafCalculationSvc** answers:
+**RafCalculationService** answers:
 
 > Given the applicable patient demographic and validated disease/HCC factors under a specific risk-adjustment model/version, what RAF score is calculated?
 
 Conceptually:
 
 ```text
-PatientSvc
+PatientService
      │
      ↓
-GapEngineSvc ──────→ HccMappingSvc
+GapEngineService ──────→ HccMappingService
      │
      │ validated/current HCCs
      ↓
-RafCalculationSvc
+RafCalculationService
      │
      ├── Demographic factors
      ├── HCC factors
@@ -786,7 +786,7 @@ Angular UI
 
 ### RAF Functional Requirements
 
-RafCalculationSvc should support, as applicable to the selected model:
+RafCalculationService should support, as applicable to the selected model:
 
 - Patient demographic factors
 - Eligible HCCs
@@ -954,7 +954,7 @@ This is critical because risk-adjustment methodologies and coefficients may chan
 
 # 24. Gap Engine
 
-GapEngineSvc is the deterministic reasoning layer.
+GapEngineService is the deterministic reasoning layer.
 
 Its responsibility is to answer:
 
@@ -1701,7 +1701,7 @@ RabbitMQ decouples services.
 Example:
 
 ```text
-DataIngestSvc
+DataIngestService
       ↓
 PatientIngested
       ↓
@@ -2158,9 +2158,9 @@ Ocelot
  ↓
 GapEngine
  ↓
-PatientSvc
+PatientService
  ↓
-HccMappingSvc
+HccMappingService
  ↓
 Search
  ↓
@@ -2198,10 +2198,10 @@ ARIS should scale independently.
 For example:
 
 ```text
-PatientSvc       → horizontal scaling
-GapEngineSvc     → horizontal scaling
+PatientService    → horizontal scaling
+GapEngineService  → horizontal scaling
 Indexer           → consumer scaling
-Embedding Worker → worker scaling
+Embedding Worker  → worker scaling
 Agent             → model-dependent scaling
 ```
 
@@ -2269,7 +2269,7 @@ Search and vector stores should be treated as **reconstructible derived stores**
 
 ARIS should gracefully handle:
 
-### PatientSvc unavailable
+### PatientService unavailable
 
 Gap request should fail clearly rather than fabricate information.
 
@@ -2427,13 +2427,13 @@ No corresponding diagnosis
 ARIS processes:
 
 ```text
-PatientSvc
+PatientService
    ↓
 Diagnosis History
    ↓
 GapEngine
    ↓
-HccMappingSvc
+HccMappingService
    ↓
 HCC mapping
    ↓
@@ -2794,9 +2794,9 @@ This approach is preferred over completing the backend first and building the UI
 
 ---
 
-# 94. IdentitySvc as a Foundational Service
+# 94. IdentityService as a Foundational Service
 
-IdentitySvc is introduced in **Phase 1**, not Phase 5.
+IdentityService is introduced in **Phase 1**, not Phase 5.
 
 Authentication and authorization are cross-cutting concerns. Retrofitting them after the application is already implemented creates avoidable coupling and security risk.
 
@@ -2805,7 +2805,7 @@ The initial architecture is:
 ```text
 Angular
    ↓
-IdentitySvc
+IdentityService
    ↓
 JWT / Access Token
    ↓
@@ -2816,7 +2816,7 @@ Ocelot Gateway
 Protected Microservices
 ```
 
-IdentitySvc is responsible for identity-related capabilities such as:
+IdentityService is responsible for identity-related capabilities such as:
 
 - Authentication
 - User lifecycle
@@ -2886,7 +2886,7 @@ The first complete end-to-end slice is:
 ```text
 Angular Login
       ↓
-IdentitySvc
+IdentityService
       ↓
 JWT
       ↓
@@ -2912,7 +2912,7 @@ Angular Patient Search
       ↓
 Ocelot
       ↓
-PatientSvc
+PatientService
       ↓
 SQL Server
       ↓
@@ -2941,7 +2941,7 @@ It validates:
 ```text
 Patient Details UI
       ↓
-PatientSvc
+PatientService
       ↓
 Encounters / Diagnoses
       ↓
@@ -2959,11 +2959,11 @@ The goal is to establish a usable longitudinal patient view before risk intellig
 ```text
 Risk Dashboard
       ↓
-GapEngineSvc
+GapEngineService
       ↓
-PatientSvc
+PatientService
       ↓
-HccMappingSvc
+HccMappingService
       ↓
 Gap Results
       ↓
@@ -3002,8 +3002,8 @@ The six phases are revised as follows.
 
 | Phase | Primary Focus | Angular | Backend | AI |
 |---|---|---|---|---|
-| **1** | Platform, Identity & UI Foundation | Application shell, login, patient workflows | IdentitySvc, PatientSvc, HccMappingSvc, GapEngineSvc, Ocelot | — |
-| **2** | Clinical Data, Ingestion & Search | Search, filters, timeline, evidence | DataIngestSvc, RabbitMQ, Outbox, OpenSearch, Indexer | — |
+| **1** | Platform, Identity & UI Foundation | Application shell, login, patient workflows | IdentityService, PatientService, HccMappingService, GapEngineService, Ocelot | — |
+| **2** | Clinical Data, Ingestion & Search | Search, filters, timeline, evidence | DataIngestService, RabbitMQ, Outbox, OpenSearch, Indexer | — |
 | **3** | Deterministic Risk Intelligence | Risk dashboard, gap review | HCC mapping, temporal rules, gap engine | — |
 | **4** | RAG & Agentic Intelligence | AI assistant, explain-gap experience | Qdrant, embeddings, agent orchestrator, guardrails | LLM/RAG/agents |
 | **5** | Clinical/Coding Workflow | Complete persona workflows | Review, assignment, feedback, audit | Advanced workflow agents |
@@ -3021,10 +3021,10 @@ Create a working ARIS platform rather than only a backend skeleton.
 
 Implement:
 
-- IdentitySvc
-- PatientSvc
-- HccMappingSvc
-- GapEngineSvc
+- IdentityService
+- PatientService
+- HccMappingService
+- GapEngineService
 - Ocelot Gateway
 - BuildingBlocks
 - SQL Server integration
@@ -3064,7 +3064,7 @@ Implement:
 An authorized user can:
 
 1. Open Angular.
-2. Authenticate through IdentitySvc.
+2. Authenticate through IdentityService.
 3. Receive and use an access token.
 4. Navigate protected routes.
 5. Search for a patient.
@@ -3084,7 +3084,7 @@ Create the clinical data pipeline and searchable evidence foundation.
 
 Implement:
 
-- DataIngestSvc
+- DataIngestService
 - RabbitMQ
 - Outbox
 - Event contracts
@@ -3118,7 +3118,7 @@ Implement:
 ```text
 Source
  ↓
-DataIngestSvc
+DataIngestService
  ↓
 SQL Server
  ↓
@@ -3144,7 +3144,7 @@ A clinical record can move through the full ingestion-to-search pipeline and bec
 
 ### RAF Calculation
 
-Introduce `RafCalculationSvc` after HCC mapping and deterministic gap logic are sufficiently established.
+Introduce `RafCalculationService` after HCC mapping and deterministic gap logic are sufficiently established.
 
 Implement:
 
@@ -3181,7 +3181,7 @@ Implement:
 
 Build the first authoritative risk-intelligence layer before introducing generative AI.
 
-### HccMappingSvc
+### HccMappingService
 
 Implement:
 
@@ -3191,7 +3191,7 @@ Implement:
 - Mapping metadata
 - Version-aware APIs
 
-### GapEngineSvc
+### GapEngineService
 
 Implement:
 
@@ -3429,11 +3429,11 @@ Conceptually:
 Docker Compose
  ├── Angular
  ├── Ocelot
- ├── IdentitySvc
- ├── PatientSvc
- ├── HccMappingSvc
- ├── GapEngineSvc
- ├── DataIngestSvc
+ ├── IdentityService
+ ├── PatientService
+ ├── HccMappingService
+ ├── GapEngineService
+ ├── DataIngestService
  ├── SQL Server
  ├── RabbitMQ
  ├── OpenSearch
@@ -3465,8 +3465,8 @@ Deployment Environment
 Image tags should eventually include immutable version identifiers, for example:
 
 ```text
-ar​ai/patient-svc:1.0.0
-ar​ai/patient-svc:git-<commit>
+aris/patient-service:1.0.0
+aris/patient-service:git-<commit>
 ```
 
 Production deployment should avoid relying solely on mutable `latest` tags.
@@ -3484,8 +3484,8 @@ Use HTTP/REST through Ocelot or controlled internal service APIs when an immedia
 Examples:
 
 ```text
-Angular → Ocelot → PatientSvc
-GapEngineSvc → HccMappingSvc
+Angular → Ocelot → PatientService
+GapEngineService → HccMappingService
 ```
 
 ## Asynchronous
@@ -3513,16 +3513,16 @@ Each service owns its business capability and persistence boundary.
 For example:
 
 ```text
-PatientSvc
+PatientService
  └── Patient data
 
-HccMappingSvc
+HccMappingService
  └── HCC mappings
 
-GapEngineSvc
+GapEngineService
  └── Gap state and deterministic risk logic
 
-IdentitySvc
+IdentityService
  └── Identity and authorization data
 ```
 
@@ -3577,67 +3577,67 @@ The AI layer therefore augments the deterministic system rather than replacing i
 # 114. Complete End-to-End ARIS Architecture
 
 ```text
-                         ┌──────────────────────┐
-                         │      Angular UI      │
-                         └──────────┬───────────┘
-                                    │
-                                    ▼
-                         ┌──────────────────────┐
-                         │     Ocelot Gateway   │
-                         └──────────┬───────────┘
-                                    │
-              ┌─────────────────────┼──────────────────────┐
-              │                     │                      │
-              ▼                     ▼                      ▼
-       ┌────────────┐        ┌────────────┐        ┌──────────────┐
-       │ IdentitySvc│        │ PatientSvc │        │ GapEngineSvc │
-       └────────────┘        └─────┬──────┘        └──────┬───────┘
-                                   │                      │
-                                   ▼                      ▼
-                            ┌─────────────┐        ┌──────────────┐
-                            │ SQL Server  │        │ HccMappingSvc│
-                            └──────┬──────┘        └──────────────┘
-                                   │
-                                   ▼
-                              ┌──────────┐
-                              │ RabbitMQ │
-                              └────┬─────┘
-                                   │
-                 ┌─────────────────┼─────────────────┐
-                 ▼                 ▼                 ▼
-           ┌──────────┐      ┌──────────┐      ┌─────────────┐
-           │ Indexer  │      │Embedding │      │   Analytics │
-           │ Worker   │      │ Worker   │      │             │
-           └────┬─────┘      └────┬─────┘      └─────────────┘
-                │                 │
-                ▼                 ▼
-          ┌────────────┐    ┌────────────┐
-          │ OpenSearch │    │   Qdrant   │
-          └──────┬─────┘    └─────┬──────┘
-                 │                │
-                 └────────┬───────┘
-                          ▼
-                 ┌──────────────────┐
-                 │ Agent Orchestrator│
-                 └─────────┬────────┘
-                           │
-                           ▼
-                       ┌───────┐
-                       │  LLM  │
-                       └───────┘
-                           │
-                           ▼
-                  Evidence-Grounded
-                      Explanation
-                           │
-                           ▼
-                    Human Reviewer
-                           │
-                           ▼
-                        Feedback
-                           │
-                           ▼
-                    Evaluation Layer
+                                ┌────────────┐
+                                │ Angular UI │
+                                └────────────┘
+                                       │
+                                       ▼
+                              ┌────────────────┐
+                              │ Ocelot Gateway │
+                              └────────────────┘
+                                       │
+                ┌──────────────────────┼──────────────────────┐
+                │                      │                      │
+                ▼                      ▼                      ▼
+       ┌─────────────────┐    ┌────────────────┐    ┌──────────────────┐
+       │ IdentityService │    │ PatientService │    │ GapEngineService │
+       └─────────────────┘    └────────────────┘    └──────────────────┘
+                                       │                      │
+                                       ▼                      ▼
+                                ┌────────────┐      ┌───────────────────┐
+                                │ SQL Server │      │ HccMappingService │
+                                └────────────┘      └───────────────────┘
+                                       │
+                                       ▼
+                                  ┌──────────┐
+                                  │ RabbitMQ │
+                                  └────┬─────┘
+                                       │
+                     ┌─────────────────┼─────────────────┐
+                     ▼                 ▼                 ▼
+               ┌──────────┐      ┌──────────┐      ┌─────────────┐
+               │ Indexer  │      │Embedding │      │   Analytics │
+               │ Worker   │      │ Worker   │      │             │
+               └────┬─────┘      └────┬─────┘      └─────────────┘
+                    │                 │
+                    ▼                 ▼
+              ┌────────────┐    ┌────────────┐
+              │ OpenSearch │    │   Qdrant   │
+              └──────┬─────┘    └─────┬──────┘
+                     │                │
+                     └────────┬───────┘
+                              ▼
+                     ┌──────────────────┐
+                     │ Agent Orchestrator│
+                     └─────────┬────────┘
+                               │
+                               ▼
+                           ┌───────┐
+                           │  LLM  │
+                           └───────┘
+                               │
+                               ▼
+                      Evidence-Grounded
+                          Explanation
+                               │
+                               ▼
+                        Human Reviewer
+                               │
+                               ▼
+                            Feedback
+                               │
+                               ▼
+                        Evaluation Layer
 ```
 
 ---
@@ -3682,7 +3682,7 @@ It should accomplish this without replacing clinical judgment or coding authorit
 
 ## Identity
 
-- [ ] IdentitySvc
+- [ ] IdentityService
 - [ ] JWT
 - [ ] Authentication
 - [ ] RBAC
@@ -3721,7 +3721,7 @@ It should accomplish this without replacing clinical judgment or coding authorit
 - [ ] Contradiction handling
 - [ ] Gap lifecycle
 - [ ] Prioritization
-- [ ] RafCalculationSvc
+- [ ] RafCalculationService
 - [ ] RAF model/version configuration
 - [ ] Demographic factors
 - [ ] HCC factors
