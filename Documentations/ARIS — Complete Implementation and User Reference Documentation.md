@@ -2591,100 +2591,11 @@ Human feedback and evaluation improve ranking and reasoning.
 
 ---
 
-# 89. Six Development Phases
+# 89. Original Six-Phase Plan (Superseded)
 
-## Phase 1 — Platform Foundation
+An earlier draft of this document proposed a six-phase plan that built the backend first and treated the UI as a Phase 5 activity ("Human Workflow"), with IdentityService/authentication deferred to Phase 6. That plan is **superseded and no longer applies**.
 
-Deliver:
-
-- Clean Architecture
-- .NET microservices
-- SQL Server
-- Docker
-- Ocelot
-- Basic APIs
-- Health checks
-- Swagger
-
-**Outcome:** Platform skeleton.
-
----
-
-## Phase 2 — Data & Search Foundation
-
-Deliver:
-
-- Data ingestion
-- RabbitMQ
-- Outbox
-- OpenSearch
-- Indexing
-- Canonical clinical data
-
-**Outcome:** Searchable clinical data platform.
-
----
-
-## Phase 3 — Deterministic Risk Intelligence
-
-Deliver:
-
-- HCC mappings
-- HCC versions
-- Temporal reasoning
-- Gap rules
-- Evidence-aware gap candidates
-
-**Outcome:** Real risk-adjustment intelligence.
-
----
-
-## Phase 4 — AI & Agentic Intelligence
-
-Deliver:
-
-- Embeddings
-- Qdrant
-- Hybrid retrieval
-- Agent Orchestrator
-- LLM
-- Guardrails
-- Explainability
-
-**Outcome:** Evidence-grounded AI reasoning.
-
----
-
-## Phase 5 — Human Workflow
-
-Deliver:
-
-- Angular UI
-- Patient dashboard
-- Gap review
-- Evidence review
-- AI assistant
-- Reviewer feedback
-
-**Outcome:** Usable clinician/coder platform.
-
----
-
-## Phase 6 — Enterprise & Research Platform
-
-Deliver:
-
-- Authentication
-- Authorization
-- Observability
-- AWS deployment
-- CI/CD
-- Experiment framework
-- Evaluation datasets
-- Agent monitoring
-- Advanced multi-agent workflows
-
-**Outcome:** Production-grade research platform.
+The current model is: Angular UI and backend development begin together in Phase 1, IdentityService is the first service built (with its UI, as the first vertical slice), and every subsequent phase pairs each new backend capability with its UI in the same slice. See [§93](#93-implementation-aligned-development-model) for the parallel development model and [§101](#101-revised-six-phase-roadmap) onward for the current, authoritative phase roadmap.
 
 ---
 
@@ -2764,6 +2675,10 @@ This section supersedes any earlier sequencing that treated the UI as a later-st
 
 ARIS will be developed using **vertical slices**. Angular UI development and backend development begin together in Phase 1 and continue together throughout all subsequent phases.
 
+> **Rule: UI implementation always happens in parallel with the service implementation it depends on.** No service is built backend-only with its UI deferred to a later phase or a later slice — every service and its corresponding Angular UI are implemented together, as one unit of work. This applies for the entire roadmap, not only Phase 1.
+
+Implementation begins with **IdentityService and its Angular UI (login, auth state, route guards, HTTP interceptor) built together as the first vertical slice** — see [§96](#96-first-vertical-slice). Every subsequent service follows the same pattern: [§97](#97-second-vertical-slice) through [§100](#100-fifth-vertical-slice) pair each backend capability with its UI counterpart in the same slice.
+
 The objective is to validate the complete user journey continuously:
 
 ```text
@@ -2796,7 +2711,7 @@ This approach is preferred over completing the backend first and building the UI
 
 # 94. IdentityService as a Foundational Service
 
-IdentityService is introduced in **Phase 1**, not Phase 5.
+IdentityService is introduced in **Phase 1**, not Phase 5, and is the first service implemented — its backend and its Angular UI (login, auth state, route guards, HTTP interceptor) are built simultaneously, not sequentially. This is ARIS's first vertical slice; see [§96](#96-first-vertical-slice).
 
 Authentication and authorization are cross-cutting concerns. Retrofitting them after the application is already implemented creates avoidable coupling and security risk.
 
@@ -2880,6 +2795,8 @@ The Angular application must never be considered the ultimate security boundary.
 ---
 
 # 96. First Vertical Slice
+
+This is the starting point of implementation: IdentityService and its Angular UI are built together, before any other capability.
 
 The first complete end-to-end slice is:
 
@@ -3646,9 +3563,9 @@ The AI layer therefore augments the deterministic system rather than replacing i
 
 The implementation should follow:
 
-> **Build the simplest deterministic version first, expose it through a complete UI workflow, then progressively add retrieval, generative AI, agents, and adaptive capabilities.**
+> **Build the simplest deterministic version and its UI together, starting with IdentityService, then progressively add retrieval, generative AI, agents, and adaptive capabilities — always pairing each new backend capability with its Angular UI in the same slice, never backend-only with the UI deferred.**
 
-This avoids building an impressive AI layer on top of an unstable clinical data and workflow foundation.
+This avoids building an impressive AI layer on top of an unstable clinical data and workflow foundation, and avoids retrofitting a UI onto services that were not designed to be consumed by one.
 
 ---
 
