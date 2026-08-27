@@ -1,0 +1,29 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "Login", "is_interactive": true },
+    { "file": "Dashboard.dc.html", "x": 1520, "y": 0, "w": 1440, "h": 900, "title": "Dashboard", "is_interactive": true },
+    { "file": "PatientSearch.dc.html", "x": 3040, "y": 0, "w": 1440, "h": 900, "title": "Patient Search", "is_interactive": true },
+    { "file": "PatientDetail.dc.html", "x": 4560, "y": 0, "w": 1440, "h": 900, "title": "Patient Detail", "is_interactive": true },
+    { "file": "UserList.dc.html", "x": 6080, "y": 0, "w": 1440, "h": 900, "title": "Users (Administrator)", "is_interactive": true },
+    { "file": "BulkImport.dc.html", "x": 7600, "y": 0, "w": 1440, "h": 900, "title": "Bulk Import (Administrator)", "is_interactive": true },
+    { "file": "Unauthorized.dc.html", "x": 0, "y": 1060, "w": 1440, "h": 900, "title": "Unauthorized (403)", "is_interactive": true },
+    { "file": "NotFound.dc.html", "x": 1520, "y": 1060, "w": 1440, "h": 900, "title": "Not Found (404)" },
+    { "file": "ForgotPassword.dc.html", "x": 3040, "y": 1060, "w": 1440, "h": 900, "title": "Forgot Password", "is_interactive": true },
+    { "file": "ResetPassword.dc.html", "x": 4560, "y": 1060, "w": 1440, "h": 900, "title": "Reset Password", "is_interactive": true },
+    { "file": "ForcedPasswordChange.dc.html", "x": 6080, "y": 1060, "w": 1440, "h": 900, "title": "Forced Password Change", "is_interactive": true }
+  ],
+  "annotations": [
+    { "id": "note-login", "x": 0, "y": -80, "w": 420, "text": "FR-1.1 / FR-1.2 — sign-in, generic invalid-credentials message. Try leaving a field blank, or password “wrong”." },
+    { "id": "note-dashboard", "x": 1520, "y": -80, "w": 420, "text": "FR-3.1 / FR-3.3 — shell + placeholder dashboard. Open the account menu (top right) to preview other roles." },
+    { "id": "note-search", "x": 3040, "y": -80, "w": 460, "text": "FR-4.1–FR-4.5 — search, pagination, and all four states. Use the “Preview state” pills or type a name/MRN, “error”, or a non-matching term." },
+    { "id": "note-detail", "x": 4560, "y": -80, "w": 420, "text": "FR-5.1–FR-5.4 — demographics only; explicitly notes what's not available yet. Try the copy-MRN button." },
+    { "id": "note-userlist", "x": 6080, "y": -80, "w": 460, "text": "FR-6.7–FR-6.9, FR-6.14/FR-6.15 — Administrator-only. Same list/state pattern as Patient Search. Deactivate opens a confirm dialog; Reset password opens a new/confirm-password form (mismatch blocked inline); reactivate needs neither." },
+    { "id": "note-bulkimport", "x": 7600, "y": -80, "w": 460, "text": "FR-6.12 / FR-6.13 — real CSV parsing (drop your own file, or “Try a sample file”). Per-row created/failed reporting." },
+    { "id": "note-unauthorized", "x": 0, "y": 980, "w": 420, "text": "FR-2.3 — shown when a role lacks access. Defaults to Auditor; switch roles in the account menu to see nav update." },
+    { "id": "note-notfound", "x": 1520, "y": 980, "w": 420, "text": "FR-3.4 — unrecognized route. Standalone, no shell (can occur pre-auth)." },
+    { "id": "note-forgot", "x": 3040, "y": 980, "w": 460, "text": "FR-6.10 / FR-6.11 — same confirmation shown whether or not the account exists (anti-enumeration)." },
+    { "id": "note-reset", "x": 4560, "y": 980, "w": 460, "text": "FR-6.10 — use the “Preview link state” toggle to see the expired/used/invalid-token case." },
+    { "id": "note-forcedchange", "x": 6080, "y": 980, "w": 460, "text": "FR-6.16 — shown after logging in with a password an Administrator set. No skip/cancel affordance by design; blocks everything else until resolved." }
+  ],
+  "launch": { "view": "canvas" }
+}

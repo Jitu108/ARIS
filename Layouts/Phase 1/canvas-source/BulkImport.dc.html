@@ -1,0 +1,306 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+    :root{
+      --bg:#F3F5F7; --surface:#FFFFFF; --border:#DFE4EA; --border-strong:#C7CFD8;
+      --text:#16202B; --text-2:#56677A; --text-3:#8A97A6;
+      --accent:#0B6E8C; --accent-hover:#075169; --accent-tint:#E5F1F5;
+      --error:#B3261E; --error-tint:#FBEAEA;
+    }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:'IBM Plex Sans', system-ui, -apple-system, sans-serif; color:var(--text); background:var(--bg); -webkit-font-smoothing:antialiased; }
+    button{ font-family:inherit; cursor:pointer; }
+    button:focus-visible, input:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+    .mono{ font-family:'IBM Plex Mono', ui-monospace, monospace; }
+    .menu-btn:hover{ background:var(--accent-tint); }
+    .menu-row:hover{ background:var(--accent-tint); }
+    .nav-item:hover{ background:var(--accent-tint); }
+    .dropzone:hover{ border-color:var(--accent); background:var(--accent-tint); }
+    @keyframes spin{ to{ transform:rotate(360deg); } }
+    .spinner{ animation: spin .7s linear infinite; }
+  </style>
+</helmet>
+<div style="width:1440px; height:900px; background:var(--bg); display:flex; flex-direction:column; overflow:hidden;">
+
+  <div style="height:60px; flex-shrink:0; border-bottom:1px solid var(--border); background:var(--surface); display:flex; align-items:center; justify-content:space-between; padding:0 24px; position:relative;">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div style="width:28px; height:28px; border-radius:7px; background:var(--accent); display:flex; align-items:center; justify-content:center;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M2 12h4l2-7 4 14 3-9 2 4h5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div style="font-size:15px; font-weight:700; letter-spacing:0.02em;">ARIS</div>
+    </div>
+    <div style="position:relative;">
+      <button class="menu-btn" onClick="{{toggleMenu}}" style="display:flex; align-items:center; gap:10px; background:none; border:none; padding:6px 10px 6px 6px; border-radius:8px;">
+        <div style="width:28px; height:28px; border-radius:999px; background:var(--accent-tint); color:var(--accent); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700;">{{userInitials}}</div>
+        <div style="display:flex; flex-direction:column; align-items:flex-start; gap:1px;">
+          <div style="font-size:13px; font-weight:600; line-height:15px;">{{userName}}</div>
+          <div style="font-size:11px; color:var(--text-2); line-height:13px;">{{roleLabel}}</div>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="color:var(--text-3);"><path d="M5 8l7 7 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <sc-if value="{{menuOpen}}" hint-placeholder-val="{{false}}">
+        <div style="position:absolute; top:44px; right:0; width:220px; background:var(--surface); border:1px solid var(--border); border-radius:8px; box-shadow:0 8px 20px rgba(16,24,32,0.14); padding:8px; z-index:20;">
+          <div style="padding:6px 10px 10px;">
+            <div style="font-size:13px; font-weight:600;">{{userName}}</div>
+            <div style="font-size:11px; color:var(--text-2); margin-top:2px;">{{roleLabel}}</div>
+          </div>
+          <div style="height:1px; background:var(--border); margin:2px 0 6px;"></div>
+          <div style="font-size:10px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-3); padding:2px 10px 6px;">Preview as (prototype only)</div>
+          <sc-for list="{{roleRows}}" as="row" hint-placeholder-count="6">
+            <button class="menu-row" onClick="{{row.pick}}" style="width:100%; display:flex; align-items:center; justify-content:space-between; background:none; border:none; text-align:left; padding:8px 10px; border-radius:6px; font-size:13px; color:var(--text);">
+              <span>{{row.label}}</span>
+              <sc-if value="{{row.isCurrent}}" hint-placeholder-val="{{false}}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5L20 6" stroke="#0B6E8C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </sc-if>
+            </button>
+          </sc-for>
+          <div style="height:1px; background:var(--border); margin:6px 0 4px;"></div>
+          <button class="menu-row" onClick="{{toggleMenu}}" style="width:100%; text-align:left; background:none; border:none; padding:8px 10px; border-radius:6px; font-size:13px; color:var(--text);">Log out</button>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+
+  <div style="flex:1; display:flex; min-height:0;">
+    <div style="width:232px; flex-shrink:0; border-right:1px solid var(--border); background:var(--surface); padding:16px 12px; display:flex; flex-direction:column; gap:4px;">
+      <div class="nav-item" style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:6px; font-size:14px; font-weight:500; color:var(--text-2);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/></svg>
+        Dashboard
+      </div>
+      <sc-if value="{{showPatientsNav}}" hint-placeholder-val="{{true}}">
+        <div class="nav-item" style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:6px; font-size:14px; font-weight:500; color:var(--text-2);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.5" cy="8.5" r="3.5" stroke="currentColor" stroke-width="1.6"/><path d="M18.5 20v-1.5a3.5 3.5 0 0 0-2.3-3.29" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M14.7 5.13a3.5 3.5 0 0 1 0 6.74" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          Patients
+        </div>
+      </sc-if>
+      <sc-if value="{{showUsersNav}}" hint-placeholder-val="{{true}}">
+        <div class="nav-item" style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:6px; font-size:14px; font-weight:600; color:var(--accent); background:var(--accent-tint); border-left:3px solid var(--accent); padding-left:9px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/><circle cx="8.5" cy="12" r="2" stroke="currentColor" stroke-width="1.6"/><path d="M5.5 16.5c.5-1.6 1.8-2.5 3-2.5s2.5.9 3 2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M14 11h4M14 14h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          Users
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="flex:1; padding:32px; overflow:auto;">
+      <div style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-2); margin-bottom:16px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Users
+      </div>
+      <div style="font-size:22px; font-weight:600; margin-bottom:6px;">Bulk import</div>
+      <div style="font-size:13px; color:var(--text-2); margin-bottom:20px; max-width:600px; line-height:19px;">Upload a CSV with columns <span class="mono" style="font-size:12px;">username, email, displayName, roles</span> (pipe-separated for multiple roles, e.g. <span class="mono" style="font-size:12px;">Coder|RiskAnalyst</span>). Each row is validated independently — one bad row won't block the rest.</div>
+
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:28px; max-width:760px;">
+
+        <sc-if value="{{isDone}}" hint-placeholder-val="{{false}}">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+            <div style="font-size:14px; font-weight:600;">{{summaryLabel}}</div>
+            <button onClick="{{reset}}" style="height:32px; padding:0 14px; border-radius:6px; border:1px solid var(--border-strong); background:var(--surface); color:var(--text); font-size:12px; font-weight:600;">Import another file</button>
+          </div>
+          <div style="border:1px solid var(--border); border-radius:6px; overflow:hidden;">
+            <div style="display:grid; grid-template-columns:0.6fr 1.4fr 1fr 2fr; gap:8px; padding:10px 16px; border-bottom:1px solid var(--border); font-size:11px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:var(--text-3);">
+              <div>Row</div><div>Username</div><div>Status</div><div>Reason</div>
+            </div>
+            <sc-for list="{{importResults}}" as="row" hint-placeholder-count="4">
+              <div style="display:grid; grid-template-columns:0.6fr 1.4fr 1fr 2fr; gap:8px; align-items:center; padding:11px 16px; border-bottom:1px solid var(--border); font-size:13px;">
+                <div class="mono" style="color:var(--text-2); font-size:12px;">{{row.row}}</div>
+                <div class="mono" style="font-size:12px;">{{row.username}}</div>
+                <div style="{{row.statusStyle}}">{{row.statusLabel}}</div>
+                <div style="color:var(--text-2); font-size:12px;">{{row.reason}}</div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{isLoading}}" hint-placeholder-val="{{false}}">
+          <div style="display:flex; flex-direction:column; align-items:center; gap:12px; padding:40px 0;">
+            <svg class="spinner" width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#0B6E8C" stroke-width="2.5" stroke-opacity="0.25"/><path d="M21 12a9 9 0 0 0-9-9" stroke="#0B6E8C" stroke-width="2.5" stroke-linecap="round"/></svg>
+            <div style="font-size:13px; color:var(--text-2);">Importing {{fileName}}&#8230;</div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{isIdle}}" hint-placeholder-val="{{true}}">
+          <sc-if value="{{hasFile}}" hint-placeholder-val="{{false}}">
+            <div style="display:flex; align-items:center; justify-content:space-between; border:1px solid var(--border); border-radius:6px; padding:12px 16px; margin-bottom:16px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="color:var(--text-3);"><rect x="5" y="3" width="14" height="18" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M9 8h6M9 12h6M9 16h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                <div>
+                  <div style="font-size:13px; font-weight:600;">{{fileName}}</div>
+                  <div style="font-size:11px; color:var(--text-3);">{{fileSizeLabel}}</div>
+                </div>
+              </div>
+              <button onClick="{{clearFile}}" style="background:none; border:none; font-size:12px; color:var(--accent); font-family:inherit;">Change file</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{noFile}}" hint-placeholder-val="{{true}}">
+            <label class="dropzone" style="position:relative; display:flex; flex-direction:column; align-items:center; gap:8px; border:1.5px dashed var(--border-strong); border-radius:8px; padding:36px; text-align:center; cursor:pointer; margin-bottom:16px;">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" style="color:var(--text-3);"><path d="M12 15V4M8 8l4-4 4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+              <div style="font-size:13px; font-weight:600;">Drop a CSV file here, or click to browse</div>
+              <div style="font-size:11px; color:var(--text-3);">username, email, displayName, roles</div>
+              <input type="file" accept=".csv,text/csv" onChange="{{onFileChange}}" style="position:absolute; width:1px; height:1px; opacity:0; overflow:hidden;" />
+            </label>
+          </sc-if>
+
+          <div style="display:flex; align-items:center; gap:12px;">
+            <button onClick="{{handleImport}}" disabled="{{noFile}}" style="{{importBtnStyle}}">Import</button>
+            <button onClick="{{loadSample}}" style="background:none; border:none; font-size:12px; color:var(--accent); font-family:inherit;">Try a sample file</button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script>
+const ROLES = [
+  { value: 'Administrator', label: 'Administrator', name: 'Dana Osei' },
+  { value: 'Clinician', label: 'Clinician', name: 'Dr. Maya Chen' },
+  { value: 'Coder', label: 'Coder', name: 'Priya Nair' },
+  { value: 'RiskAnalyst', label: 'Risk Analyst', name: 'Sam Whitfield' },
+  { value: 'Auditor', label: 'Auditor', name: 'Jordan Blake' },
+  { value: 'Researcher', label: 'Researcher', name: 'Alex Kim' }
+];
+const PATIENT_NAV_ROLES = ['Administrator', 'Clinician', 'Coder', 'RiskAnalyst'];
+const VALID_ROLES = ['Administrator', 'Clinician', 'Coder', 'RiskAnalyst', 'Auditor', 'Researcher'];
+const EXISTING_USERNAMES = ['d.osei', 'm.chen', 'p.nair', 's.whitfield', 'j.blake', 'a.kim'];
+const EXISTING_EMAILS = ['d.osei@aris.local', 'm.chen@aris.local', 'p.nair@aris.local', 's.whitfield@aris.local', 'j.blake@aris.local', 'a.kim@aris.local'];
+const SAMPLE_CSV = 'username,email,displayName,roles\n' +
+  't.reyes,t.reyes@aris.local,Tomas Reyes,Coder\n' +
+  'k.patel,k.patel@aris.local,Kavya Patel,Clinician|RiskAnalyst\n' +
+  'm.chen,m.chen2@aris.local,Duplicate Chen,Clinician\n' +
+  'n.brooks,n.brooks@aris.local,Nina Brooks,SuperAdmin\n' +
+  'e.fischer,,Elin Fischer,Auditor';
+
+function initialsFor(name) {
+  const parts = name.split(' ').filter((p) => !p.endsWith('.'));
+  const first = parts[0] ? parts[0][0] : '';
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
+  return (first + last).toUpperCase();
+}
+
+function formatSize(bytes) {
+  if (!bytes && bytes !== 0) return '';
+  if (bytes < 1024) return bytes + ' B';
+  return (bytes / 1024).toFixed(1) + ' KB';
+}
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      role: 'Administrator', menuOpen: false,
+      phase: 'idle', fileName: '', fileSize: 0, fileText: '', importResults: []
+    };
+  }
+
+  toggleMenu() { this.setState({ menuOpen: !this.state.menuOpen }); }
+  pickRole(value) { this.setState({ role: value, menuOpen: false }); }
+
+  onFileChange(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    this.setState({ fileName: file.name, fileSize: file.size });
+    const reader = new FileReader();
+    reader.onload = () => { this.setState({ fileText: String(reader.result || '') }); };
+    reader.readAsText(file);
+  }
+
+  clearFile() { this.setState({ fileName: '', fileSize: 0, fileText: '' }); }
+
+  loadSample() {
+    this.setState({ fileName: 'sample-import.csv', fileSize: SAMPLE_CSV.length, fileText: SAMPLE_CSV });
+  }
+
+  parseAndValidate(text) {
+    const lines = (text || '').split(/\r?\n/).filter((l) => l.trim().length > 0);
+    const rows = lines.length && lines[0].toLowerCase().indexOf('username') !== -1 ? lines.slice(1) : lines;
+    const seenThisFile = [];
+    return rows.map((line, i) => {
+      const parts = line.split(',').map((s) => s.trim());
+      const username = parts[0], email = parts[1], displayName = parts[2], rolesRaw = parts[3];
+      const rowNum = i + 1;
+      if (!username || !email || !displayName || !rolesRaw) {
+        return { row: rowNum, username: username || '(missing)', status: 'failed', reason: 'Missing required field' };
+      }
+      const roles = rolesRaw.split('|').map((r) => r.trim());
+      const invalidRole = roles.filter((r) => VALID_ROLES.indexOf(r) === -1)[0];
+      if (invalidRole) {
+        return { row: rowNum, username: username, status: 'failed', reason: 'Invalid role: ' + invalidRole };
+      }
+      const key = username.toLowerCase();
+      const emailKey = email.toLowerCase();
+      if (EXISTING_USERNAMES.indexOf(key) !== -1 || EXISTING_EMAILS.indexOf(emailKey) !== -1 || seenThisFile.indexOf(key) !== -1) {
+        return { row: rowNum, username: username, status: 'failed', reason: 'Username or email already in use' };
+      }
+      seenThisFile.push(key);
+      return { row: rowNum, username: username, status: 'created', reason: '' };
+    });
+  }
+
+  handleImport() {
+    if (!this.state.fileName) return;
+    this.setState({ phase: 'loading' });
+    setTimeout(() => {
+      const results = this.parseAndValidate(this.state.fileText);
+      this.setState({ phase: 'done', importResults: results });
+    }, 700);
+  }
+
+  reset() {
+    this.setState({ phase: 'idle', fileName: '', fileSize: 0, fileText: '', importResults: [] });
+  }
+
+  renderVals() {
+    const s = this.state;
+    const current = ROLES.find((r) => r.value === s.role) || ROLES[0];
+    const created = s.importResults.filter((r) => r.status === 'created').length;
+    const failed = s.importResults.filter((r) => r.status === 'failed').length;
+
+    return {
+      roleLabel: current.label,
+      userName: current.name,
+      userInitials: initialsFor(current.name),
+      menuOpen: s.menuOpen,
+      showPatientsNav: PATIENT_NAV_ROLES.indexOf(s.role) !== -1,
+      showUsersNav: s.role === 'Administrator',
+      toggleMenu: () => this.toggleMenu(),
+      roleRows: ROLES.map((r) => ({ label: r.label, isCurrent: r.value === s.role, pick: () => this.pickRole(r.value) })),
+
+      isIdle: s.phase === 'idle',
+      isLoading: s.phase === 'loading',
+      isDone: s.phase === 'done',
+      hasFile: !!s.fileName,
+      noFile: !s.fileName,
+      fileName: s.fileName,
+      fileSizeLabel: formatSize(s.fileSize),
+      onFileChange: (e) => this.onFileChange(e),
+      clearFile: () => this.clearFile(),
+      loadSample: () => this.loadSample(),
+      handleImport: () => this.handleImport(),
+      importBtnStyle: s.fileName
+        ? 'height:38px;padding:0 20px;border-radius:6px;border:none;background:var(--accent);color:white;font-size:13px;font-weight:600;'
+        : 'height:38px;padding:0 20px;border-radius:6px;border:none;background:#5B94A8;color:white;font-size:13px;font-weight:600;',
+      reset: () => this.reset(),
+
+      summaryLabel: s.importResults.length + ' rows processed — ' + created + ' created, ' + failed + ' failed',
+      importResults: s.importResults.map((r) => ({
+        row: r.row,
+        username: r.username,
+        statusLabel: r.status === 'created' ? 'Created' : 'Failed',
+        statusStyle: r.status === 'created' ? 'color:var(--accent); font-weight:600;' : 'color:var(--error); font-weight:600;',
+        reason: r.reason
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1188 @@
+<!doctype html>
+<title>ARIS Phase 1 Walkthrough</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --bg:#F3F5F7; --surface:#FFFFFF; --border:#DFE4EA; --border-strong:#C7CFD8;
+    --text:#16202B; --text-2:#56677A; --text-3:#8A97A6;
+    --accent:#0B6E8C; --accent-hover:#075169; --accent-tint:#E5F1F5; --accent-tint-strong:#CFE7EE;
+    --error:#B3261E; --error-tint:#FBEAEA; --error-border:#F1B6B0;
+    --warn:#9A6B12; --warn-tint:#FBF2E2; --warn-border:#EAD3A0;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing:antialiased; line-height:1.4;
+  }
+  button, input{ font-family:inherit; }
+  button{ cursor:pointer; }
+  .mono{ font-family:'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace; }
+  a{ color:var(--accent); }
+  :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+  [hidden]{ display:none !important; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  @keyframes pulse{ 0%,100%{ opacity:.45; } 50%{ opacity:.9; } }
+  @media (prefers-reduced-motion: reduce){
+    .spinner{ animation:none; }
+    .skeleton{ animation:none; opacity:.6; }
+  }
+  .spinner{ animation:spin .7s linear infinite; }
+  .skeleton{ background:var(--border); border-radius:4px; animation:pulse 1.3s ease-in-out infinite; }
+
+  /* ---------- auth (login / forgot / reset) ---------- */
+  #page-auth{ min-height:100vh; display:flex; align-items:center; justify-content:center; padding:32px; }
+  .auth-wrap{ width:100%; max-width:380px; display:flex; flex-direction:column; align-items:center; gap:24px; }
+  .brand{ display:flex; flex-direction:column; align-items:center; gap:12px; }
+  .brand-mark{ width:36px; height:36px; border-radius:9px; background:var(--accent); display:flex; align-items:center; justify-content:center; }
+  .brand-text{ display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .brand-word{ font-size:16px; font-weight:700; letter-spacing:.02em; }
+  .brand-sub{ font-size:12px; color:var(--text-3); }
+  .card{ width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:32px; display:flex; flex-direction:column; gap:16px; }
+  .card-title{ font-size:18px; font-weight:600; }
+  .card-lede{ font-size:13px; color:var(--text-2); line-height:19px; margin-top:2px; }
+  .field{ display:flex; flex-direction:column; gap:6px; }
+  .field label{ font-size:12px; font-weight:600; color:var(--text-2); }
+  .field input[type=text], .field input[type=password], .field input[type=email]{
+    height:38px; padding:0 12px; border:1px solid var(--border-strong); border-radius:6px;
+    font-size:14px; color:var(--text); background:var(--surface); width:100%;
+  }
+  .field input.has-error{ border-color:var(--error-border); }
+  .pw-wrap{ position:relative; display:flex; align-items:center; }
+  .pw-toggle{ position:absolute; right:8px; background:none; border:none; padding:4px; display:flex; color:var(--text-3); }
+  .btn-primary{ height:40px; border-radius:6px; border:none; background:var(--accent); color:#fff; font-size:14px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px; }
+  .btn-primary:disabled{ background:#5B94A8; }
+  .btn-secondary{ height:36px; padding:0 16px; border-radius:6px; border:1px solid var(--border-strong); background:var(--surface); color:var(--text); font-size:13px; font-weight:600; }
+  .btn-link{ background:none; border:none; padding:0; font-size:12px; color:var(--accent); font-family:inherit; }
+  .banner-error{ display:flex; gap:8px; align-items:flex-start; background:var(--error-tint); border:1px solid var(--error-border); border-radius:6px; padding:10px 12px; font-size:13px; color:var(--error); line-height:18px; }
+  .banner-info{ display:flex; gap:10px; align-items:flex-start; background:var(--accent-tint); border:1px solid var(--accent-tint-strong); border-radius:8px; padding:14px 16px; font-size:13px; color:var(--text); line-height:19px; }
+  .center-note{ display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center; }
+  .prototype-note{ font-size:11px; color:var(--text-3); line-height:16px; font-style:italic; }
+  .success-icon{ width:40px; height:40px; border-radius:999px; background:var(--accent-tint); display:flex; align-items:center; justify-content:center; }
+  .pill-group{ display:flex; align-items:center; gap:8px; }
+  .pill-label{ font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); margin-right:2px; }
+  .pill{ padding:6px 12px; border-radius:999px; border:1px solid var(--border-strong); background:var(--surface); color:var(--text-2); font-size:12px; font-weight:600; }
+  .pill.active{ border-color:var(--accent); background:var(--accent); color:#fff; }
+
+  /* ---------- app shell ---------- */
+  #page-app{ min-height:100vh; display:flex; flex-direction:column; }
+  #app-header{ height:60px; flex-shrink:0; border-bottom:1px solid var(--border); background:var(--surface); display:flex; align-items:center; justify-content:space-between; padding:0 24px; position:relative; z-index:30; }
+  #app-body{ flex:1; display:flex; min-height:0; }
+  #sidebar{ width:232px; flex-shrink:0; border-right:1px solid var(--border); background:var(--surface); padding:16px 12px; display:flex; flex-direction:column; gap:4px; }
+  .nav-item{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:6px; font-size:14px; font-weight:500; color:var(--text-2); background:none; border:none; text-align:left; width:100%; }
+  .nav-item:hover{ background:var(--accent-tint); }
+  .nav-item.active{ color:var(--accent); font-weight:600; background:var(--accent-tint); border-left:3px solid var(--accent); padding-left:9px; }
+  #content{ flex:1; padding:32px; overflow:auto; }
+  .page-title{ font-size:22px; font-weight:600; }
+  .page-lede{ font-size:13px; color:var(--text-2); margin-top:4px; }
+  .menu-btn{ display:flex; align-items:center; gap:10px; background:none; border:none; padding:6px 10px 6px 6px; border-radius:8px; }
+  .menu-btn:hover{ background:var(--accent-tint); }
+  .avatar{ width:28px; height:28px; border-radius:999px; background:var(--accent-tint); color:var(--accent); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
+  .id-block{ display:flex; flex-direction:column; align-items:flex-start; gap:1px; }
+  .id-name{ font-size:13px; font-weight:600; line-height:15px; }
+  .id-role{ font-size:11px; color:var(--text-2); line-height:13px; }
+  #account-menu{ position:absolute; top:44px; right:24px; width:220px; background:var(--surface); border:1px solid var(--border); border-radius:8px; box-shadow:0 8px 20px rgba(16,24,32,.14); padding:8px; z-index:40; }
+  .menu-row{ width:100%; display:flex; align-items:center; justify-content:space-between; background:none; border:none; text-align:left; padding:8px 10px; border-radius:6px; font-size:13px; color:var(--text); }
+  .menu-row:hover{ background:var(--accent-tint); }
+  .menu-section-label{ font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); padding:2px 10px 6px; }
+  .menu-divider{ height:1px; background:var(--border); margin:6px 0 4px; }
+  .logo-mark{ width:28px; height:28px; border-radius:7px; background:var(--accent); display:flex; align-items:center; justify-content:center; }
+  .logo-word{ font-size:15px; font-weight:700; letter-spacing:.02em; }
+  .logo-row{ display:flex; align-items:center; gap:10px; }
+
+  /* ---------- generic list/table ---------- */
+  .toolbar{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .search-input-wrap{ position:relative; width:360px; }
+  .search-input-wrap svg{ position:absolute; left:12px; top:11px; color:var(--text-3); }
+  .search-input{ width:100%; height:38px; padding:0 12px 0 36px; border:1px solid var(--border-strong); border-radius:6px; font-size:14px; color:var(--text); background:var(--surface); }
+  .list-card{ background:var(--surface); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .grid-head{ display:grid; gap:8px; padding:10px 20px; border-bottom:1px solid var(--border); font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--text-3); }
+  .grid-row{ display:grid; gap:8px; align-items:center; padding:13px 20px; border-bottom:1px solid var(--border); font-size:13px; background:var(--surface); border-left:none; border-right:none; border-top:none; width:100%; text-align:left; }
+  button.grid-row{ cursor:pointer; }
+  button.grid-row:hover{ background:var(--accent-tint); }
+  .row-name{ font-weight:600; }
+  .row-muted{ color:var(--text-2); }
+  .pager{ display:flex; align-items:center; justify-content:space-between; padding:12px 20px; }
+  .pager-controls{ display:flex; align-items:center; gap:8px; }
+  .pager-btn{ height:28px; padding:0 12px; border-radius:6px; border:1px solid var(--border-strong); background:var(--surface); color:var(--text); font-size:12px; font-weight:600; }
+  .pager-btn:disabled{ border-color:var(--border); color:var(--text-3); cursor:default; }
+  .empty-state, .error-state{ display:flex; flex-direction:column; align-items:center; text-align:center; gap:10px; padding:64px 40px; }
+  .status-pill{ display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:600; }
+  .status-active{ background:var(--accent-tint); color:var(--accent); }
+  .status-inactive{ background:var(--border); color:var(--text-3); }
+  .action-btn{ height:28px; padding:0 12px; border-radius:6px; font-size:12px; font-weight:600; }
+  .action-deactivate{ border:1px solid var(--border-strong); background:var(--surface); color:var(--text); }
+  .action-reactivate{ border:none; background:var(--accent); color:#fff; }
+
+  /* ---------- dashboard / detail ---------- */
+  .placeholder-card{ background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:48px 40px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:12px; }
+  .icon-circle{ width:48px; height:48px; border-radius:999px; background:var(--accent-tint); display:flex; align-items:center; justify-content:center; }
+  .breadcrumb{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-2); margin-bottom:16px; background:none; border:none; padding:0; }
+  .breadcrumb:hover{ color:var(--accent); }
+  .detail-card{ background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:28px 32px; max-width:760px; }
+  .detail-name{ font-size:20px; font-weight:600; margin-bottom:16px; }
+  .detail-row{ display:flex; align-items:center; gap:28px; flex-wrap:wrap; }
+  .detail-field-label{ font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); margin-bottom:4px; }
+  .copy-btn{ background:none; border:none; padding:3px; border-radius:5px; color:var(--text-3); display:flex; position:relative; }
+  .copy-btn:hover{ background:var(--accent-tint); }
+  .copy-tip{ position:absolute; top:-28px; left:50%; transform:translateX(-50%); background:var(--text); color:#fff; font-size:11px; padding:3px 8px; border-radius:4px; white-space:nowrap; }
+
+  /* ---------- bulk import ---------- */
+  .dropzone{ position:relative; display:flex; flex-direction:column; align-items:center; gap:8px; border:1.5px dashed var(--border-strong); border-radius:8px; padding:36px; text-align:center; cursor:pointer; margin-bottom:16px; }
+  .dropzone:hover{ border-color:var(--accent); background:var(--accent-tint); }
+  .file-row{ display:flex; align-items:center; justify-content:space-between; border:1px solid var(--border); border-radius:6px; padding:12px 16px; margin-bottom:16px; }
+
+  /* ---------- modal ---------- */
+  #modal-scrim{ position:fixed; inset:0; background:rgba(15,20,26,.45); display:flex; align-items:center; justify-content:center; z-index:100; }
+  #modal-box{ width:400px; background:var(--surface); border-radius:8px; padding:28px; display:flex; flex-direction:column; gap:16px; }
+
+  /* ---------- not found ---------- */
+  #page-notfound{ min-height:100vh; display:flex; align-items:center; justify-content:center; }
+  .nf-num{ font-family:'IBM Plex Mono', ui-monospace, monospace; font-size:56px; font-weight:600; color:var(--border-strong); letter-spacing:.02em; }
+</style>
+
+<!-- ================= AUTH PAGES ================= -->
+<div id="page-auth" class="page">
+  <div class="auth-wrap">
+    <div class="brand">
+      <div class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M2 12h4l2-7 4 14 3-9 2 4h5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="brand-text"><div class="brand-word">ARIS</div><div class="brand-sub">Agentic Risk Intelligence System</div></div>
+    </div>
+
+    <!-- LOGIN -->
+    <form id="view-login" class="card" novalidate>
+      <div><div class="card-title">Sign in to ARIS</div><div class="card-lede">Enter your credentials to continue.</div></div>
+      <div id="login-error" class="banner-error" hidden></div>
+      <div class="field">
+        <label for="login-username">Username or email</label>
+        <input id="login-username" type="text" placeholder="e.g. m.chen" autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="login-password">Password</label>
+        <div class="pw-wrap">
+          <input id="login-password" type="password" placeholder="Enter your password" autocomplete="current-password" style="padding-right:40px;">
+          <button type="button" id="login-pw-toggle" class="pw-toggle" aria-label="Toggle password visibility"></button>
+        </div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; margin-top:-8px;">
+        <button type="button" class="btn-link" id="goto-forgot">Forgot your password?</button>
+      </div>
+      <button type="submit" id="login-submit" class="btn-primary"><span id="login-submit-label">Sign in</span></button>
+      <div class="prototype-note">Prototype tip: leave a field blank, or enter &#8220;wrong&#8221; as the password, to preview the error state.</div>
+    </form>
+
+    <!-- FORGOT PASSWORD -->
+    <form id="view-forgot" class="card" hidden novalidate>
+      <div><div class="card-title">Reset your password</div><div class="card-lede">Enter your username or email and we'll send you a reset link.</div></div>
+      <div class="field"><label for="forgot-input">Username or email</label><input id="forgot-input" type="text" placeholder="e.g. m.chen"></div>
+      <button type="submit" class="btn-primary">Send reset link</button>
+      <button type="button" class="btn-link" style="text-align:center;" id="forgot-back">Back to sign in</button>
+      <div class="prototype-note">Prototype note: this screen always shows the same confirmation, whether or not the account exists &#8212; that's intentional, to avoid revealing which accounts are real.</div>
+    </form>
+    <div id="view-forgot-sent" class="card center-note" hidden>
+      <div class="success-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 7l8 6 8-6" stroke="#0B6E8C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="5" width="16" height="14" rx="2" stroke="#0B6E8C" stroke-width="1.8"/></svg></div>
+      <div style="font-size:16px; font-weight:600;">Check your email</div>
+      <div class="card-lede">If an account exists for that username or email, a password reset link has been sent.</div>
+      <button type="button" class="btn-secondary" id="forgot-sent-back">Back to sign in</button>
+    </div>
+
+    <!-- RESET PASSWORD -->
+    <div class="pill-group" id="reset-demo-toggle">
+      <span class="pill-label">Prototype &#8212; preview link state:</span>
+      <button type="button" class="pill active" data-link-state="valid">Valid link</button>
+      <button type="button" class="pill" data-link-state="invalid">Invalid / expired link</button>
+    </div>
+    <div id="view-reset-invalid" class="card" hidden>
+      <div class="banner-error"><span>This reset link is no longer valid.</span></div>
+      <div class="card-lede">It may have expired or already been used. Request a new link to continue.</div>
+      <button type="button" class="btn-primary" id="reset-invalid-request">Request a new link</button>
+    </div>
+    <form id="view-reset-form" class="card" hidden novalidate>
+      <div><div class="card-title">Set a new password</div><div class="card-lede">Choose a new password for your account.</div></div>
+      <div id="reset-mismatch" class="banner-error" hidden></div>
+      <div class="field"><label for="reset-new">New password</label><input id="reset-new" type="password"></div>
+      <div class="field"><label for="reset-confirm">Confirm new password</label><input id="reset-confirm" type="password"></div>
+      <button type="submit" class="btn-primary">Update password</button>
+    </form>
+    <div id="view-reset-success" class="card center-note" hidden>
+      <div class="success-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5L20 6" stroke="#0B6E8C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div style="font-size:16px; font-weight:600;">Password updated</div>
+      <div class="card-lede">You can now sign in with your new password.</div>
+      <button type="button" class="btn-secondary" id="reset-success-back">Back to sign in</button>
+    </div>
+
+    <!-- FORCED PASSWORD CHANGE -->
+    <form id="view-change-password" class="card" hidden novalidate>
+      <div><div class="card-title">Set a new password</div><div class="card-lede">Your password was reset by an administrator. Choose a new password to continue.</div></div>
+      <div id="change-pw-error" class="banner-error" hidden></div>
+      <div class="field"><label for="change-pw-new">New password</label><input id="change-pw-new" type="password"></div>
+      <div class="field"><label for="change-pw-confirm">Confirm new password</label><input id="change-pw-confirm" type="password"></div>
+      <button type="submit" class="btn-primary">Update password</button>
+    </form>
+
+    <div style="font-size:11px; color:var(--text-3);">ARIS &#8212; Internal Clinical Platform</div>
+  </div>
+</div>
+
+<!-- ================= APP SHELL ================= -->
+<div id="page-app" class="page" hidden>
+  <header id="app-header">
+    <div class="logo-row">
+      <div class="logo-mark"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M2 12h4l2-7 4 14 3-9 2 4h5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="logo-word">ARIS</div>
+    </div>
+    <button class="menu-btn" id="account-menu-btn" aria-haspopup="true" aria-expanded="false">
+      <div class="avatar" id="header-initials"></div>
+      <div class="id-block"><div class="id-name" id="header-name"></div><div class="id-role" id="header-role"></div></div>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="color:var(--text-3);"><path d="M5 8l7 7 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div id="account-menu" hidden>
+      <div style="padding:6px 10px 10px;"><div class="id-name" id="menu-name"></div><div class="id-role" style="margin-top:2px;" id="menu-role"></div></div>
+      <div class="menu-divider"></div>
+      <div class="menu-section-label">Preview as (prototype only)</div>
+      <div id="role-rows"></div>
+      <div class="menu-divider"></div>
+      <button class="menu-row" id="logout-btn">Log out</button>
+    </div>
+  </header>
+
+  <div id="app-body">
+    <nav id="sidebar">
+      <button class="nav-item" data-nav="dashboard">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/></svg>
+        Dashboard
+      </button>
+      <button class="nav-item" data-nav="patients" id="nav-patients">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.5" cy="8.5" r="3.5" stroke="currentColor" stroke-width="1.6"/><path d="M18.5 20v-1.5a3.5 3.5 0 0 0-2.3-3.29" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M14.7 5.13a3.5 3.5 0 0 1 0 6.74" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Patients
+      </button>
+      <button class="nav-item" data-nav="users" id="nav-users">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/><circle cx="8.5" cy="12" r="2" stroke="currentColor" stroke-width="1.6"/><path d="M5.5 16.5c.5-1.6 1.8-2.5 3-2.5s2.5.9 3 2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M14 11h4M14 14h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        Users
+      </button>
+    </nav>
+
+    <main id="content">
+      <!-- DASHBOARD -->
+      <section id="view-dashboard" class="view">
+        <div class="page-title">Dashboard</div>
+        <div class="page-lede" style="margin-bottom:24px;">Welcome back, <span id="dash-name"></span>.</div>
+        <div class="placeholder-card">
+          <div class="icon-circle"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 19V10" stroke="#0B6E8C" stroke-width="1.8" stroke-linecap="round"/><path d="M11 19V5" stroke="#0B6E8C" stroke-width="1.8" stroke-linecap="round"/><path d="M18 19v-7" stroke="#0B6E8C" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+          <div style="font-size:16px; font-weight:600;">Your dashboard will grow with ARIS</div>
+          <div class="card-lede" style="max-width:420px;">Risk-adjustment insights, population metrics, and prioritized opportunities will appear here in a later release. For now, start by searching for a patient.</div>
+          <button class="btn-primary" style="width:auto; padding:0 18px; margin-top:8px;" id="dash-goto-patients">Go to Patient Search</button>
+        </div>
+      </section>
+
+      <!-- PATIENT SEARCH -->
+      <section id="view-patients" class="view" hidden>
+        <div class="page-title" style="margin-bottom:20px;">Patient Search</div>
+        <form class="toolbar" id="patient-search-form">
+          <div class="search-input-wrap">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="1.6"/><path d="M20 20l-4.8-4.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            <input class="search-input" id="patient-search-input" type="text" placeholder="Search by name or MRN">
+          </div>
+          <button type="submit" class="btn-primary" style="width:auto; padding:0 18px;">Search</button>
+        </form>
+        <div class="pill-group" style="margin-bottom:20px;">
+          <span class="pill-label">Preview state:</span>
+          <button type="button" class="pill active" data-patient-phase="results">Results</button>
+          <button type="button" class="pill" data-patient-phase="loading">Loading</button>
+          <button type="button" class="pill" data-patient-phase="empty">Empty</button>
+          <button type="button" class="pill" data-patient-phase="error">Error</button>
+        </div>
+        <div class="list-card" id="patient-list-card"></div>
+      </section>
+
+      <!-- PATIENT DETAIL -->
+      <section id="view-patient-detail" class="view" hidden>
+        <button class="breadcrumb" id="patient-detail-back">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Patient Search
+        </button>
+        <div class="detail-card">
+          <div class="detail-name" id="pd-name"></div>
+          <div class="detail-row">
+            <div><div class="detail-field-label">MRN</div><div style="display:flex; align-items:center; gap:6px;"><div class="mono" id="pd-mrn" style="font-size:14px;"></div>
+              <button class="copy-btn" id="pd-copy-mrn" aria-label="Copy MRN"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="8" y="8" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M4 16V5.5A1.5 1.5 0 0 1 5.5 4H16" stroke="currentColor" stroke-width="1.5"/></svg><span id="pd-copy-tip" class="copy-tip" hidden>Copied</span></button>
+            </div></div>
+            <div><div class="detail-field-label">Date of Birth</div><div id="pd-dob" style="font-size:14px;"></div></div>
+            <div><div class="detail-field-label">Sex</div><div id="pd-sex" style="font-size:14px;"></div></div>
+          </div>
+        </div>
+        <div class="banner-info" style="max-width:760px; margin-top:16px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex-shrink:0; margin-top:1px; color:#0B6E8C;"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 11v5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="8" r="0.9" fill="currentColor"/></svg>
+          <div>Clinical history, encounters, diagnoses, and risk-adjustment opportunities aren't available yet &#8212; they arrive in later phases. This view currently shows demographics only.</div>
+        </div>
+      </section>
+
+      <!-- USERS -->
+      <section id="view-users" class="view" hidden>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+          <div class="page-title">Users</div>
+          <button class="btn-primary" style="width:auto; padding:0 16px; height:36px;" id="users-goto-bulk">Bulk import</button>
+        </div>
+        <form class="toolbar" id="user-search-form">
+          <div class="search-input-wrap">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="1.6"/><path d="M20 20l-4.8-4.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            <input class="search-input" id="user-search-input" type="text" placeholder="Search by name, username, or email">
+          </div>
+          <button type="submit" class="btn-primary" style="width:auto; padding:0 18px;">Search</button>
+        </form>
+        <div class="pill-group" style="margin-bottom:20px;">
+          <span class="pill-label">Preview state:</span>
+          <button type="button" class="pill active" data-user-phase="results">Results</button>
+          <button type="button" class="pill" data-user-phase="loading">Loading</button>
+          <button type="button" class="pill" data-user-phase="empty">Empty</button>
+          <button type="button" class="pill" data-user-phase="error">Error</button>
+        </div>
+        <div class="list-card" id="user-list-card"></div>
+      </section>
+
+      <!-- BULK IMPORT -->
+      <section id="view-bulk" class="view" hidden>
+        <button class="breadcrumb" id="bulk-back">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Users
+        </button>
+        <div class="page-title" style="margin-bottom:6px;">Bulk import</div>
+        <div class="card-lede" style="margin-bottom:20px; max-width:600px;">Upload a CSV with columns <span class="mono" style="font-size:12px;">username, email, displayName, roles</span> (pipe-separated for multiple roles, e.g. <span class="mono" style="font-size:12px;">Coder|RiskAnalyst</span>). Each row is validated independently &#8212; one bad row won't block the rest.</div>
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:28px; max-width:760px;" id="bulk-card"></div>
+      </section>
+
+      <!-- UNAUTHORIZED -->
+      <section id="view-unauthorized" class="view" hidden style="display:flex; align-items:center; justify-content:center; min-height:70vh;">
+        <div class="center-note" style="max-width:380px;">
+          <div class="icon-circle" style="background:var(--warn-tint); border:1px solid var(--warn-border);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="5" y="10" width="14" height="10" rx="2" stroke="#9A6B12" stroke-width="1.7"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="#9A6B12" stroke-width="1.7"/></svg></div>
+          <div style="font-size:18px; font-weight:600;">You don't have access to this page</div>
+          <div class="card-lede">Your role (<span id="unauth-role"></span>) doesn't include permission to view <span id="unauth-area"></span>. Contact an administrator if you believe this is incorrect.</div>
+          <button class="btn-primary" style="width:auto; padding:0 18px; margin-top:8px;" id="unauth-back">Back to Dashboard</button>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- ================= NOT FOUND ================= -->
+<div id="page-notfound" class="page" hidden>
+  <div class="center-note">
+    <div class="brand-mark" style="margin-bottom:8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M2 12h4l2-7 4 14 3-9 2 4h5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="nf-num">404</div>
+    <div style="font-size:18px; font-weight:600;">Page not found</div>
+    <div class="card-lede" style="max-width:340px;">The page you're looking for doesn't exist or may have moved.</div>
+    <button class="btn-primary" style="width:auto; padding:0 18px; margin-top:8px;" id="nf-back">Back to Dashboard</button>
+    <button type="button" class="btn-link" id="nf-login">or return to sign in</button>
+  </div>
+</div>
+
+<!-- ================= USER-ACTION MODAL (deactivate / reset password) ================= -->
+<div id="modal-scrim" hidden>
+  <div id="modal-box"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- data ---------------- */
+  var ROLES = [
+    { value:'Administrator', label:'Administrator', name:'Dana Osei' },
+    { value:'Clinician', label:'Clinician', name:'Dr. Maya Chen' },
+    { value:'Coder', label:'Coder', name:'Priya Nair' },
+    { value:'RiskAnalyst', label:'Risk Analyst', name:'Sam Whitfield' },
+    { value:'Auditor', label:'Auditor', name:'Jordan Blake' },
+    { value:'Researcher', label:'Researcher', name:'Alex Kim' }
+  ];
+  var PATIENT_ROLES = ['Administrator','Clinician','Coder','RiskAnalyst'];
+
+  var PATIENTS = [
+    { name:'Eleanor Ruiz', mrn:'MRN-004821', dob:'Mar 12, 1968', age:58, sex:'Female' },
+    { name:'Marcus Feldman', mrn:'MRN-002210', dob:'Jul 04, 1955', age:71, sex:'Male' },
+    { name:'Priyanka Subramaniam', mrn:'MRN-009944', dob:'Jan 22, 1979', age:47, sex:'Female' },
+    { name:'Tomas Guerrero', mrn:'MRN-001187', dob:'Oct 30, 1962', age:63, sex:'Male' },
+    { name:'Wei Lin Ong', mrn:'MRN-007765', dob:'May 15, 1990', age:36, sex:'Female' },
+    { name:'Harold Whitfield', mrn:'MRN-003321', dob:'Feb 08, 1947', age:79, sex:'Male' },
+    { name:'Aaliyah Johnson', mrn:'MRN-005560', dob:'Sep 19, 1985', age:41, sex:'Female' },
+    { name:'Nikolai Petrov', mrn:'MRN-006654', dob:'Dec 01, 1973', age:52, sex:'Male' },
+    { name:'Grace Okonkwo', mrn:'MRN-008832', dob:'Apr 27, 1958', age:68, sex:'Female' },
+    { name:'Samuel Everly', mrn:'MRN-000456', dob:'Jun 11, 1999', age:27, sex:'Male' }
+  ];
+  var PATIENT_PAGE_SIZE = 5;
+
+  var USERS = [
+    { name:'Dana Osei', username:'d.osei', roles:'Administrator', isActive:true },
+    { name:'Dr. Maya Chen', username:'m.chen', roles:'Clinician', isActive:true },
+    { name:'Priya Nair', username:'p.nair', roles:'Coder', isActive:true },
+    { name:'Sam Whitfield', username:'s.whitfield', roles:'Risk Analyst', isActive:true },
+    { name:'Jordan Blake', username:'j.blake', roles:'Auditor', isActive:true },
+    { name:'Alex Kim', username:'a.kim', roles:'Researcher', isActive:true },
+    { name:'Chris Alvarado', username:'c.alvarado', roles:'Coder', isActive:false },
+    { name:'Robin Osei-Tutu', username:'r.osei-tutu', roles:'Clinician, Risk Analyst', isActive:true }
+  ];
+  var USER_PAGE_SIZE = 5;
+  var EXISTING_USERNAMES = ['d.osei','m.chen','p.nair','s.whitfield','j.blake','a.kim'];
+  var EXISTING_EMAILS = ['d.osei@aris.local','m.chen@aris.local','p.nair@aris.local','s.whitfield@aris.local','j.blake@aris.local','a.kim@aris.local'];
+  var VALID_ROLES = ['Administrator','Clinician','Coder','RiskAnalyst','Auditor','Researcher'];
+  var SAMPLE_CSV = 'username,email,displayName,roles\n' +
+    't.reyes,t.reyes@aris.local,Tomas Reyes,Coder\n' +
+    'k.patel,k.patel@aris.local,Kavya Patel,Clinician|RiskAnalyst\n' +
+    'm.chen,m.chen2@aris.local,Duplicate Chen,Clinician\n' +
+    'n.brooks,n.brooks@aris.local,Nina Brooks,SuperAdmin\n' +
+    'e.fischer,,Elin Fischer,Auditor';
+
+  /* ---------------- state ---------------- */
+  var state = {
+    authenticated:false, role:'Clinician', menuOpen:false,
+    unauthArea:'this page',
+    mustChangePassword:false, pendingChangeUsername:null,
+    patientQuery:'', patientPhase:'results', patientResults:PATIENTS.slice(), patientPage:1, selectedMrn:null,
+    userQuery:'', userPhase:'results', userResults:USERS.slice(), userPage:1,
+    modalMode:null, modalUsername:null,
+    resetLinkState:'valid',
+    bulkPhase:'idle', bulkFileName:'', bulkFileSize:0, bulkFileText:'', bulkResults:[]
+  };
+
+  function $(id){ return document.getElementById(id); }
+  function initials(name){
+    var parts = name.split(' ').filter(function(p){ return p.slice(-1) !== '.'; });
+    var first = parts[0] ? parts[0][0] : '';
+    var last = parts.length > 1 ? parts[parts.length - 1][0] : '';
+    return (first + last).toUpperCase();
+  }
+  function fmtSize(bytes){
+    if (bytes === null || bytes === undefined) return '';
+    if (bytes < 1024) return bytes + ' B';
+    return (bytes / 1024).toFixed(1) + ' KB';
+  }
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+
+  /* ---------------- header / nav / account menu ---------------- */
+  function currentRoleObj(){
+    for (var i=0;i<ROLES.length;i++){ if (ROLES[i].value === state.role) return ROLES[i]; }
+    return ROLES[1];
+  }
+
+  function renderHeader(){
+    var r = currentRoleObj();
+    $('header-initials').textContent = initials(r.name);
+    $('header-name').textContent = r.name;
+    $('header-role').textContent = r.label;
+    $('menu-name').textContent = r.name;
+    $('menu-role').textContent = r.label;
+    $('dash-name').textContent = r.name;
+
+    var showPatients = PATIENT_ROLES.indexOf(state.role) !== -1;
+    var showUsers = state.role === 'Administrator';
+    $('nav-patients').hidden = !showPatients;
+    $('nav-users').hidden = !showUsers;
+
+    var rows = ROLES.map(function(role){
+      var current = role.value === state.role;
+      return '<button type="button" class="menu-row" data-pick-role="' + role.value + '">' +
+        '<span>' + esc(role.label) + '</span>' +
+        (current ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5L20 6" stroke="#0B6E8C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '') +
+        '</button>';
+    }).join('');
+    $('role-rows').innerHTML = rows;
+
+    $('account-menu').hidden = !state.menuOpen;
+    $('account-menu-btn').setAttribute('aria-expanded', state.menuOpen ? 'true' : 'false');
+  }
+
+  function setActiveNav(routeName){
+    var items = document.querySelectorAll('#sidebar .nav-item');
+    for (var i=0;i<items.length;i++){
+      var isActive = items[i].getAttribute('data-nav') === routeName;
+      items[i].classList.toggle('active', isActive);
+    }
+  }
+
+  /* ---------------- router ---------------- */
+  var PAGES = ['page-auth','page-app','page-notfound'];
+  var AUTH_VIEWS = ['view-login','view-forgot','view-forgot-sent','view-reset-invalid','view-reset-form','view-reset-success','view-change-password'];
+  var APP_VIEWS = ['view-dashboard','view-patients','view-patient-detail','view-users','view-bulk','view-unauthorized'];
+
+  function showPage(pageId){
+    for (var i=0;i<PAGES.length;i++){ $(PAGES[i]).hidden = (PAGES[i] !== pageId); }
+  }
+  function showAuthView(viewId){
+    for (var i=0;i<AUTH_VIEWS.length;i++){ $(AUTH_VIEWS[i]).hidden = (AUTH_VIEWS[i] !== viewId); }
+    $('reset-demo-toggle').hidden = (viewId !== 'view-reset-invalid' && viewId !== 'view-reset-form' && viewId !== 'view-reset-success');
+  }
+  function showAppView(viewId){
+    for (var i=0;i<APP_VIEWS.length;i++){ $(APP_VIEWS[i]).hidden = (APP_VIEWS[i] !== viewId); }
+  }
+
+  function route(){
+    var hash = (location.hash || '').replace(/^#\/?/, '');
+    if (!hash){ hash = state.authenticated ? 'dashboard' : 'login'; }
+    var parts = hash.split('/').filter(Boolean);
+    var name = parts.join('/');
+
+    if (name === 'login'){ showPage('page-auth'); showAuthView('view-login'); return; }
+    if (name === 'forgot-password'){ showPage('page-auth'); showAuthView('view-forgot'); return; }
+    if (name === 'reset-password'){
+      showPage('page-auth');
+      showAuthView(state.resetLinkState === 'invalid' ? 'view-reset-invalid' : 'view-reset-form');
+      return;
+    }
+    if (name === 'change-password'){
+      if (requireAuth()) return;
+      showPage('page-auth'); showAuthView('view-change-password');
+      return;
+    }
+
+    if (name === 'dashboard'){
+      if (requireAuth()) return;
+      if (requireNotMustChange()) return;
+      showPage('page-app'); showAppView('view-dashboard'); setActiveNav('dashboard'); renderHeader();
+      return;
+    }
+    if (name === 'patients'){
+      if (requireAuth()) return;
+      if (requireNotMustChange()) return;
+      if (requireRole(PATIENT_ROLES, 'Patients')) return;
+      showPage('page-app'); showAppView('view-patients'); setActiveNav('patients'); renderHeader();
+      renderPatientList();
+      return;
+    }
+    if (parts[0] === 'patients' && parts[1]){
+      if (requireAuth()) return;
+      if (requireNotMustChange()) return;
+      if (requireRole(PATIENT_ROLES, 'Patients')) return;
+      var patient = null;
+      for (var i=0;i<PATIENTS.length;i++){ if (PATIENTS[i].mrn === parts[1]) patient = PATIENTS[i]; }
+      if (!patient){ showPage('page-notfound'); return; }
+      showPage('page-app'); showAppView('view-patient-detail'); setActiveNav('patients'); renderHeader();
+      renderPatientDetail(patient);
+      return;
+    }
+    if (name === 'admin/users'){
+      if (requireAuth()) return;
+      if (requireNotMustChange()) return;
+      if (requireRole(['Administrator'], 'Users')) return;
+      showPage('page-app'); showAppView('view-users'); setActiveNav('users'); renderHeader();
+      renderUserList();
+      return;
+    }
+    if (name === 'admin/users/import'){
+      if (requireAuth()) return;
+      if (requireNotMustChange()) return;
+      if (requireRole(['Administrator'], 'Users')) return;
+      showPage('page-app'); showAppView('view-bulk'); setActiveNav('users'); renderHeader();
+      renderBulk();
+      return;
+    }
+    if (name === 'unauthorized'){
+      if (requireAuth()) return;
+      if (requireNotMustChange()) return;
+      showPage('page-app'); showAppView('view-unauthorized'); setActiveNav(''); renderHeader();
+      $('unauth-role').textContent = currentRoleObj().label;
+      $('unauth-area').textContent = state.unauthArea;
+      return;
+    }
+
+    showPage('page-notfound');
+  }
+
+  function requireAuth(){
+    if (!state.authenticated){ location.hash = '#/login'; return true; }
+    return false;
+  }
+  function requireNotMustChange(){
+    if (state.mustChangePassword){ location.hash = '#/change-password'; return true; }
+    return false;
+  }
+  function requireRole(allowed, area){
+    if (allowed.indexOf(state.role) === -1){
+      state.unauthArea = area;
+      location.hash = '#/unauthorized';
+      return true;
+    }
+    return false;
+  }
+  function nav(path){ location.hash = '#/' + path; }
+
+  /* ---------------- login ---------------- */
+  function wireLogin(){
+    var showPw = false;
+    function renderPwIcon(){
+      $('login-pw-toggle').innerHTML = showPw
+        ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 3l18 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M10.6 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17.9 17.9 0 0 1-3.5 4.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M6.1 6.1C3.4 7.9 2 11 2 12c0 0 1.6 3 4.6 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'
+        : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/></svg>';
+      $('login-password').type = showPw ? 'text' : 'password';
+    }
+    renderPwIcon();
+    $('login-pw-toggle').addEventListener('click', function(){ showPw = !showPw; renderPwIcon(); });
+
+    $('goto-forgot').addEventListener('click', function(){ nav('forgot-password'); });
+
+    $('view-login').addEventListener('submit', function(e){
+      e.preventDefault();
+      var username = $('login-username').value.trim();
+      var password = $('login-password').value;
+      var errEl = $('login-error');
+      if (!username || !password){
+        errEl.textContent = 'Enter your username and password.'; errEl.hidden = false;
+        return;
+      }
+      errEl.hidden = true;
+      var btn = $('login-submit'), label = $('login-submit-label');
+      btn.disabled = true; label.textContent = 'Signing in…';
+      setTimeout(function(){
+        btn.disabled = false; label.textContent = 'Sign in';
+        var adminResetMatch = null;
+        USERS.forEach(function(u){
+          if (u.pendingPassword && u.username.toLowerCase() === username.toLowerCase() && password === u.pendingPassword){
+            adminResetMatch = u;
+          }
+        });
+        if (adminResetMatch){
+          state.authenticated = true;
+          state.mustChangePassword = true;
+          state.pendingChangeUsername = adminResetMatch.username;
+          nav('dashboard');
+          return;
+        }
+        if (password.trim().toLowerCase() === 'wrong'){
+          errEl.textContent = 'Invalid credentials.'; errEl.hidden = false;
+          return;
+        }
+        state.authenticated = true;
+        state.mustChangePassword = false;
+        nav('dashboard');
+      }, 600);
+    });
+  }
+
+  /* ---------------- forgot / reset ---------------- */
+  function wireForgotReset(){
+    $('view-forgot').addEventListener('submit', function(e){ e.preventDefault(); showAuthView('view-forgot-sent'); });
+    $('forgot-back').addEventListener('click', function(){ nav('login'); });
+    $('forgot-sent-back').addEventListener('click', function(){ nav('login'); });
+
+    var toggleBtns = document.querySelectorAll('#reset-demo-toggle [data-link-state]');
+    for (var i=0;i<toggleBtns.length;i++){
+      toggleBtns[i].addEventListener('click', function(e){
+        state.resetLinkState = e.currentTarget.getAttribute('data-link-state');
+        var btns = document.querySelectorAll('#reset-demo-toggle [data-link-state]');
+        for (var j=0;j<btns.length;j++){ btns[j].classList.toggle('active', btns[j] === e.currentTarget); }
+        if (state.resetLinkState === 'valid'){
+          $('reset-mismatch').hidden = true;
+          $('reset-new').value = ''; $('reset-confirm').value = '';
+        }
+        showAuthView(state.resetLinkState === 'invalid' ? 'view-reset-invalid' : 'view-reset-form');
+      });
+    }
+    $('reset-invalid-request').addEventListener('click', function(){ nav('forgot-password'); });
+    $('view-reset-form').addEventListener('submit', function(e){
+      e.preventDefault();
+      var pw = $('reset-new').value, cpw = $('reset-confirm').value;
+      var errEl = $('reset-mismatch');
+      if (!pw){ errEl.textContent = 'Enter a new password.'; errEl.hidden = false; return; }
+      if (pw !== cpw){ errEl.textContent = "Passwords don't match."; errEl.hidden = false; return; }
+      errEl.hidden = true;
+      showAuthView('view-reset-success');
+    });
+    $('reset-success-back').addEventListener('click', function(){ nav('login'); });
+  }
+
+  /* ---------------- forced password change ---------------- */
+  function wireChangePassword(){
+    $('view-change-password').addEventListener('submit', function(e){
+      e.preventDefault();
+      var pw = $('change-pw-new').value, cpw = $('change-pw-confirm').value;
+      var errEl = $('change-pw-error');
+      if (!pw){ errEl.textContent = 'Enter a new password.'; errEl.hidden = false; return; }
+      if (pw !== cpw){ errEl.textContent = "Passwords don't match."; errEl.hidden = false; return; }
+      errEl.hidden = true;
+      USERS.forEach(function(u){
+        if (u.username === state.pendingChangeUsername){ u.pendingPassword = null; u.mustChangePassword = false; }
+      });
+      state.mustChangePassword = false;
+      state.pendingChangeUsername = null;
+      $('change-pw-new').value = ''; $('change-pw-confirm').value = '';
+      nav('dashboard');
+    });
+  }
+
+  /* ---------------- account menu / logout ---------------- */
+  function wireAccountMenu(){
+    $('account-menu-btn').addEventListener('click', function(e){
+      e.stopPropagation();
+      state.menuOpen = !state.menuOpen;
+      renderHeader();
+    });
+    document.addEventListener('click', function(e){
+      if (state.menuOpen && !$('account-menu').contains(e.target) && e.target !== $('account-menu-btn') && !$('account-menu-btn').contains(e.target)){
+        state.menuOpen = false; renderHeader();
+      }
+    });
+    $('role-rows').addEventListener('click', function(e){
+      var btn = e.target.closest ? e.target.closest('[data-pick-role]') : null;
+      if (!btn) return;
+      state.role = btn.getAttribute('data-pick-role');
+      state.menuOpen = false;
+      renderHeader();
+      route();
+    });
+    $('logout-btn').addEventListener('click', function(){
+      state.authenticated = false; state.menuOpen = false;
+      nav('login');
+    });
+    var NAV_ROUTES = { dashboard:'dashboard', patients:'patients', users:'admin/users' };
+    document.querySelectorAll('[data-nav]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var key = btn.getAttribute('data-nav');
+        nav(NAV_ROUTES[key] || key);
+      });
+    });
+    $('dash-goto-patients').addEventListener('click', function(){ nav('patients'); });
+    $('unauth-back').addEventListener('click', function(){ nav('dashboard'); });
+    $('nf-back').addEventListener('click', function(){ nav('dashboard'); });
+    $('nf-login').addEventListener('click', function(){ nav('login'); });
+  }
+
+  /* ---------------- patient search ---------------- */
+  var PATIENT_PILL_MAP = { results:'results', loading:'loading', empty:'empty', error:'error' };
+
+  function renderPatientList(){
+    var card = $('patient-list-card');
+    var s = state;
+    if (s.patientPhase === 'loading'){
+      card.innerHTML = loadingRowsHtml(['2.2fr','1fr','1fr','0.7fr','28px'], ['Name','MRN','Date of Birth','Sex','']);
+      return;
+    }
+    if (s.patientPhase === 'empty'){
+      card.innerHTML = emptyStateHtml('No patients found',
+        (s.patientQuery.trim() ? 'No patients found for &#8220;' + esc(s.patientQuery.trim()) + '&#8221;.' : 'No patients matched your search.') +
+        '<div style="font-size:12px; color:var(--text-3); margin-top:2px;">Try a different name or MRN.</div>',
+        'patient-clear');
+      return;
+    }
+    if (s.patientPhase === 'error'){
+      card.innerHTML = errorStateHtml("We couldn't complete this search", 'Something went wrong retrieving results. Please try again.', 'patient-retry');
+      return;
+    }
+    var totalPages = Math.max(1, Math.ceil(s.patientResults.length / PATIENT_PAGE_SIZE));
+    var page = Math.min(s.patientPage, totalPages);
+    var start = s.patientResults.length === 0 ? 0 : (page - 1) * PATIENT_PAGE_SIZE + 1;
+    var end = Math.min(page * PATIENT_PAGE_SIZE, s.patientResults.length);
+    var pageItems = s.patientResults.slice((page - 1) * PATIENT_PAGE_SIZE, page * PATIENT_PAGE_SIZE);
+
+    var html = '<div class="grid-head" style="grid-template-columns:2.2fr 1fr 1fr 0.7fr 28px;"><div>Name</div><div>MRN</div><div>Date of Birth</div><div>Sex</div><div></div></div>';
+    html += pageItems.map(function(p){
+      var selected = p.mrn === s.selectedMrn;
+      return '<button type="button" class="grid-row" data-select-patient="' + esc(p.mrn) + '" style="grid-template-columns:2.2fr 1fr 1fr 0.7fr 28px;' + (selected ? 'background:var(--accent-tint-strong);' : '') + '">' +
+        '<div class="row-name">' + esc(p.name) + '</div>' +
+        '<div class="mono row-muted">' + esc(p.mrn) + '</div>' +
+        '<div class="row-muted">' + esc(p.dob) + '</div>' +
+        '<div class="row-muted">' + esc(p.sex) + '</div>' +
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="color:var(--text-3);"><path d="M8 5l7 7-7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+        '</button>';
+    }).join('');
+    html += pagerHtml(s.patientResults.length === 0 ? 'No results' : 'Showing ' + start + '–' + end + ' of ' + s.patientResults.length + ' patients', page, totalPages, 'patient-prev', 'patient-next');
+    card.innerHTML = html;
+
+    card.querySelectorAll('[data-select-patient]').forEach(function(btn){
+      btn.addEventListener('click', function(){ nav('patients/' + btn.getAttribute('data-select-patient')); });
+    });
+    wirePager(card, 'patient-prev', 'patient-next', page, totalPages, function(newPage){ s.patientPage = newPage; renderPatientList(); });
+  }
+
+  function renderPatientDetail(p){
+    $('pd-name').textContent = p.name;
+    $('pd-mrn').textContent = p.mrn;
+    $('pd-dob').textContent = p.dob + ' · Age ' + p.age;
+    $('pd-sex').textContent = p.sex;
+  }
+
+  function wirePatientSearch(){
+    $('patient-search-input').addEventListener('input', function(e){ state.patientQuery = e.target.value; });
+    $('patient-search-form').addEventListener('submit', function(e){
+      e.preventDefault();
+      var q = state.patientQuery.trim().toLowerCase();
+      state.patientPhase = 'loading'; renderPatientList();
+      setTimeout(function(){
+        if (q === 'error'){ state.patientPhase = 'error'; renderPatientList(); return; }
+        var matches = q ? PATIENTS.filter(function(p){ return p.name.toLowerCase().indexOf(q) !== -1 || p.mrn.toLowerCase().indexOf(q) !== -1; }) : PATIENTS.slice();
+        if (matches.length === 0){ state.patientPhase = 'empty'; state.patientResults = []; }
+        else { state.patientPhase = 'results'; state.patientResults = matches; state.patientPage = 1; }
+        renderPatientList();
+      }, 600);
+    });
+    document.querySelectorAll('[data-patient-phase]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var phase = btn.getAttribute('data-patient-phase');
+        document.querySelectorAll('[data-patient-phase]').forEach(function(b){ b.classList.toggle('active', b === btn); });
+        if (phase === 'results'){ state.patientResults = PATIENTS.slice(); state.patientPage = 1; }
+        else if (phase === 'empty'){ state.patientResults = []; }
+        state.patientPhase = phase;
+        renderPatientList();
+      });
+    });
+    $('patient-detail-back').addEventListener('click', function(){ nav('patients'); });
+    $('pd-copy-mrn').addEventListener('click', function(){
+      $('pd-copy-tip').hidden = false;
+      setTimeout(function(){ $('pd-copy-tip').hidden = true; }, 1400);
+    });
+    document.body.addEventListener('click', function(e){
+      if (e.target && e.target.id === 'patient-clear'){
+        state.patientQuery = ''; $('patient-search-input').value = '';
+        state.patientPhase = 'results'; state.patientResults = PATIENTS.slice(); state.patientPage = 1;
+        renderPatientList();
+      }
+      if (e.target && e.target.id === 'patient-retry'){
+        state.patientPhase = 'loading'; renderPatientList();
+        setTimeout(function(){ state.patientPhase = 'results'; state.patientResults = PATIENTS.slice(); state.patientPage = 1; renderPatientList(); }, 600);
+      }
+    });
+  }
+
+  /* ---------------- users ---------------- */
+  function renderUserList(){
+    var card = $('user-list-card');
+    var s = state;
+    if (s.userPhase === 'loading'){
+      card.innerHTML = loadingRowsHtml(['1.5fr','1.4fr','1.3fr','0.8fr','1.7fr'], ['Name','Username / Email','Role(s)','Status','Actions']);
+      return;
+    }
+    if (s.userPhase === 'empty'){
+      card.innerHTML = emptyStateHtml('No accounts match', 'Try a different name, username, or email.', 'user-clear');
+      return;
+    }
+    if (s.userPhase === 'error'){
+      card.innerHTML = errorStateHtml("We couldn't load the user list", 'Something went wrong retrieving accounts. Please try again.', 'user-retry');
+      return;
+    }
+    var totalPages = Math.max(1, Math.ceil(s.userResults.length / USER_PAGE_SIZE));
+    var page = Math.min(s.userPage, totalPages);
+    var start = s.userResults.length === 0 ? 0 : (page - 1) * USER_PAGE_SIZE + 1;
+    var end = Math.min(page * USER_PAGE_SIZE, s.userResults.length);
+    var pageItems = s.userResults.slice((page - 1) * USER_PAGE_SIZE, page * USER_PAGE_SIZE);
+
+    var html = '<div class="grid-head" style="grid-template-columns:1.5fr 1.4fr 1.3fr 0.8fr 1.7fr;"><div>Name</div><div>Username / Email</div><div>Role(s)</div><div>Status</div><div>Actions</div></div>';
+    html += pageItems.map(function(u){
+      var statusClass = u.isActive ? 'status-active' : 'status-inactive';
+      var statusLabel = u.isActive ? 'Active' : 'Inactive';
+      var actions = u.isActive
+        ? '<button type="button" class="action-btn action-deactivate" data-reset="' + esc(u.username) + '" style="margin-right:6px;">Reset password</button>' +
+          '<button type="button" class="action-btn action-deactivate" data-deactivate="' + esc(u.username) + '">Deactivate</button>'
+        : '<button type="button" class="action-btn action-reactivate" data-reactivate="' + esc(u.username) + '">Reactivate</button>';
+      return '<div class="grid-row" style="grid-template-columns:1.5fr 1.4fr 1.3fr 0.8fr 1.7fr; cursor:default;">' +
+        '<div class="row-name">' + esc(u.name) + '</div>' +
+        '<div class="mono row-muted" style="font-size:12px;">' + esc(u.username) + '</div>' +
+        '<div class="row-muted">' + esc(u.roles) + '</div>' +
+        '<div><span class="status-pill ' + statusClass + '">' + statusLabel + '</span></div>' +
+        '<div>' + actions + '</div>' +
+        '</div>';
+    }).join('');
+    html += pagerHtml(s.userResults.length === 0 ? 'No results' : 'Showing ' + start + '–' + end + ' of ' + s.userResults.length + ' accounts', page, totalPages, 'user-prev', 'user-next');
+    card.innerHTML = html;
+
+    card.querySelectorAll('[data-deactivate]').forEach(function(btn){
+      btn.addEventListener('click', function(){ openModal('deactivate', btn.getAttribute('data-deactivate')); });
+    });
+    card.querySelectorAll('[data-reset]').forEach(function(btn){
+      btn.addEventListener('click', function(){ openModal('reset-form', btn.getAttribute('data-reset')); });
+    });
+    card.querySelectorAll('[data-reactivate]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var uname = btn.getAttribute('data-reactivate');
+        USERS.forEach(function(u){ if (u.username === uname) u.isActive = true; });
+        renderUserList();
+      });
+    });
+    wirePager(card, 'user-prev', 'user-next', page, totalPages, function(newPage){ s.userPage = newPage; renderUserList(); });
+  }
+
+  function findUser(username){
+    var found = null;
+    USERS.forEach(function(u){ if (u.username === username) found = u; });
+    return found;
+  }
+
+  function openModal(mode, username){
+    state.modalMode = mode;
+    state.modalUsername = username;
+    renderModal();
+    $('modal-scrim').hidden = false;
+  }
+  function closeModal(){
+    state.modalMode = null; state.modalUsername = null;
+    $('modal-scrim').hidden = true;
+  }
+
+  function renderModal(){
+    var box = $('modal-box');
+    var u = findUser(state.modalUsername);
+    if (!u) return;
+
+    if (state.modalMode === 'deactivate'){
+      box.innerHTML =
+        '<div style="font-size:16px; font-weight:600;">Deactivate ' + esc(u.name) + '?</div>' +
+        '<div class="card-lede">They\'ll be signed out immediately and won\'t be able to log in until reactivated.</div>' +
+        '<div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">' +
+        '<button class="btn-secondary" id="modal-cancel">Cancel</button>' +
+        '<button class="btn-primary" style="width:auto; padding:0 16px;" id="modal-confirm">Deactivate</button></div>';
+      $('modal-cancel').addEventListener('click', closeModal);
+      $('modal-confirm').addEventListener('click', function(){
+        u.isActive = false;
+        closeModal();
+        renderUserList();
+      });
+      return;
+    }
+
+    if (state.modalMode === 'reset-form'){
+      box.innerHTML =
+        '<div style="font-size:16px; font-weight:600;">Reset ' + esc(u.name) + '&#8217;s password</div>' +
+        '<div id="modal-reset-error" class="banner-error" hidden></div>' +
+        '<div class="field"><label>New password</label><input type="password" id="modal-reset-new"></div>' +
+        '<div class="field"><label>Confirm new password</label><input type="password" id="modal-reset-confirm"></div>' +
+        '<div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">' +
+        '<button class="btn-secondary" id="modal-cancel">Cancel</button>' +
+        '<button class="btn-primary" style="width:auto; padding:0 16px;" id="modal-confirm">Reset password</button></div>';
+      $('modal-cancel').addEventListener('click', closeModal);
+      $('modal-confirm').addEventListener('click', function(){
+        var pw = $('modal-reset-new').value;
+        var cpw = $('modal-reset-confirm').value;
+        var errEl = $('modal-reset-error');
+        if (!pw){ errEl.textContent = 'Enter a new password.'; errEl.hidden = false; return; }
+        if (pw !== cpw){ errEl.textContent = "Passwords don't match."; errEl.hidden = false; return; }
+        u.pendingPassword = pw;
+        u.mustChangePassword = true;
+        state.modalMode = 'reset-success';
+        renderModal();
+      });
+      return;
+    }
+
+    if (state.modalMode === 'reset-success'){
+      box.innerHTML =
+        '<div style="font-size:16px; font-weight:600;">Password reset for ' + esc(u.name) + '</div>' +
+        '<div class="card-lede">They&#8217;ve been signed out and will be required to set their own new password the next time they sign in.</div>' +
+        '<div style="display:flex; justify-content:flex-end; margin-top:8px;">' +
+        '<button class="btn-primary" style="width:auto; padding:0 16px;" id="modal-done">Done</button></div>';
+      $('modal-done').addEventListener('click', function(){
+        closeModal();
+        renderUserList();
+      });
+      return;
+    }
+  }
+
+  function wireUsers(){
+    $('user-search-input').addEventListener('input', function(e){ state.userQuery = e.target.value; });
+    $('user-search-form').addEventListener('submit', function(e){
+      e.preventDefault();
+      var q = state.userQuery.trim().toLowerCase();
+      state.userPhase = 'loading'; renderUserList();
+      setTimeout(function(){
+        var matches = q ? USERS.filter(function(u){ return u.name.toLowerCase().indexOf(q) !== -1 || u.username.toLowerCase().indexOf(q) !== -1; }) : USERS.slice();
+        if (matches.length === 0){ state.userPhase = 'empty'; state.userResults = []; }
+        else { state.userPhase = 'results'; state.userResults = matches; state.userPage = 1; }
+        renderUserList();
+      }, 600);
+    });
+    document.querySelectorAll('[data-user-phase]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var phase = btn.getAttribute('data-user-phase');
+        document.querySelectorAll('[data-user-phase]').forEach(function(b){ b.classList.toggle('active', b === btn); });
+        if (phase === 'results'){ state.userResults = USERS.slice(); state.userPage = 1; }
+        else if (phase === 'empty'){ state.userResults = []; }
+        state.userPhase = phase;
+        renderUserList();
+      });
+    });
+    $('users-goto-bulk').addEventListener('click', function(){ nav('admin/users/import'); });
+    document.body.addEventListener('click', function(e){
+      if (e.target && e.target.id === 'user-clear'){
+        state.userQuery = ''; $('user-search-input').value = '';
+        state.userPhase = 'results'; state.userResults = USERS.slice(); state.userPage = 1;
+        renderUserList();
+      }
+      if (e.target && e.target.id === 'user-retry'){
+        state.userPhase = 'loading'; renderUserList();
+        setTimeout(function(){ state.userPhase = 'results'; state.userResults = USERS.slice(); state.userPage = 1; renderUserList(); }, 600);
+      }
+    });
+    $('modal-scrim').addEventListener('click', function(e){
+      if (e.target === $('modal-scrim')){ closeModal(); }
+    });
+  }
+
+  /* ---------------- bulk import ---------------- */
+  function parseAndValidate(text){
+    var lines = (text || '').split(/\r?\n/).filter(function(l){ return l.trim().length > 0; });
+    var rows = lines.length && lines[0].toLowerCase().indexOf('username') !== -1 ? lines.slice(1) : lines;
+    var seen = [];
+    return rows.map(function(line, i){
+      var parts = line.split(',').map(function(s){ return s.trim(); });
+      var username = parts[0], email = parts[1], displayName = parts[2], rolesRaw = parts[3];
+      var rowNum = i + 1;
+      if (!username || !email || !displayName || !rolesRaw){
+        return { row:rowNum, username: username || '(missing)', status:'failed', reason:'Missing required field' };
+      }
+      var roles = rolesRaw.split('|').map(function(r){ return r.trim(); });
+      var invalidRole = null;
+      for (var j=0;j<roles.length;j++){ if (VALID_ROLES.indexOf(roles[j]) === -1){ invalidRole = roles[j]; break; } }
+      if (invalidRole){ return { row:rowNum, username:username, status:'failed', reason:'Invalid role: ' + invalidRole }; }
+      var key = username.toLowerCase();
+      var emailKey = email.toLowerCase();
+      if (EXISTING_USERNAMES.indexOf(key) !== -1 || EXISTING_EMAILS.indexOf(emailKey) !== -1 || seen.indexOf(key) !== -1){
+        return { row:rowNum, username:username, status:'failed', reason:'Username or email already in use' };
+      }
+      seen.push(key);
+      return { row:rowNum, username:username, status:'created', reason:'' };
+    });
+  }
+
+  function renderBulk(){
+    var card = $('bulk-card');
+    var s = state;
+    if (s.bulkPhase === 'done'){
+      var created = s.bulkResults.filter(function(r){ return r.status === 'created'; }).length;
+      var failed = s.bulkResults.filter(function(r){ return r.status === 'failed'; }).length;
+      var html = '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">' +
+        '<div style="font-size:14px; font-weight:600;">' + s.bulkResults.length + ' rows processed — ' + created + ' created, ' + failed + ' failed</div>' +
+        '<button type="button" class="btn-secondary" id="bulk-reset">Import another file</button></div>';
+      html += '<div style="border:1px solid var(--border); border-radius:6px; overflow:hidden;">';
+      html += '<div class="grid-head" style="grid-template-columns:0.6fr 1.4fr 1fr 2fr;"><div>Row</div><div>Username</div><div>Status</div><div>Reason</div></div>';
+      html += s.bulkResults.map(function(r){
+        var color = r.status === 'created' ? 'color:var(--accent); font-weight:600;' : 'color:var(--error); font-weight:600;';
+        var label = r.status === 'created' ? 'Created' : 'Failed';
+        return '<div class="grid-row" style="grid-template-columns:0.6fr 1.4fr 1fr 2fr; cursor:default;">' +
+          '<div class="mono row-muted" style="font-size:12px;">' + r.row + '</div>' +
+          '<div class="mono" style="font-size:12px;">' + esc(r.username) + '</div>' +
+          '<div style="' + color + '">' + label + '</div>' +
+          '<div class="row-muted" style="font-size:12px;">' + esc(r.reason) + '</div>' +
+          '</div>';
+      }).join('');
+      html += '</div>';
+      card.innerHTML = html;
+      $('bulk-reset').addEventListener('click', function(){
+        state.bulkPhase = 'idle'; state.bulkFileName=''; state.bulkFileSize=0; state.bulkFileText=''; state.bulkResults=[];
+        renderBulk();
+      });
+      return;
+    }
+    if (s.bulkPhase === 'loading'){
+      card.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; gap:12px; padding:40px 0;">' +
+        '<svg class="spinner" width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#0B6E8C" stroke-width="2.5" stroke-opacity="0.25"/><path d="M21 12a9 9 0 0 0-9-9" stroke="#0B6E8C" stroke-width="2.5" stroke-linecap="round"/></svg>' +
+        '<div style="font-size:13px; color:var(--text-2);">Importing ' + esc(s.bulkFileName) + '…</div></div>';
+      return;
+    }
+    // idle
+    var body = '';
+    if (s.bulkFileName){
+      body += '<div class="file-row"><div style="display:flex; align-items:center; gap:10px;">' +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="color:var(--text-3);"><rect x="5" y="3" width="14" height="18" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M9 8h6M9 12h6M9 16h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>' +
+        '<div><div style="font-size:13px; font-weight:600;">' + esc(s.bulkFileName) + '</div><div style="font-size:11px; color:var(--text-3);">' + fmtSize(s.bulkFileSize) + '</div></div></div>' +
+        '<button type="button" class="btn-link" id="bulk-change">Change file</button></div>';
+    } else {
+      body += '<label class="dropzone" for="bulk-file-input">' +
+        '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" style="color:var(--text-3);"><path d="M12 15V4M8 8l4-4 4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>' +
+        '<div style="font-size:13px; font-weight:600;">Drop a CSV file here, or click to browse</div>' +
+        '<div style="font-size:11px; color:var(--text-3);">username, email, displayName, roles</div>' +
+        '<input type="file" id="bulk-file-input" accept=".csv,text/csv" style="position:absolute; width:1px; height:1px; opacity:0; overflow:hidden;"></label>';
+    }
+    body += '<div style="display:flex; align-items:center; gap:12px;">' +
+      '<button type="button" class="btn-primary" style="width:auto; padding:0 20px;' + (s.bulkFileName ? '' : 'background:#5B94A8;') + '" id="bulk-import-btn"' + (s.bulkFileName ? '' : ' disabled') + '>Import</button>' +
+      '<button type="button" class="btn-link" id="bulk-sample">Try a sample file</button></div>';
+    card.innerHTML = body;
+
+    if ($('bulk-file-input')){
+      $('bulk-file-input').addEventListener('change', function(e){
+        var file = e.target.files && e.target.files[0];
+        if (!file) return;
+        state.bulkFileName = file.name; state.bulkFileSize = file.size;
+        var reader = new FileReader();
+        reader.onload = function(){ state.bulkFileText = String(reader.result || ''); };
+        reader.readAsText(file);
+        renderBulk();
+      });
+    }
+    if ($('bulk-change')){
+      $('bulk-change').addEventListener('click', function(){
+        state.bulkFileName=''; state.bulkFileSize=0; state.bulkFileText=''; renderBulk();
+      });
+    }
+    $('bulk-sample').addEventListener('click', function(){
+      state.bulkFileName = 'sample-import.csv'; state.bulkFileSize = SAMPLE_CSV.length; state.bulkFileText = SAMPLE_CSV;
+      renderBulk();
+    });
+    $('bulk-import-btn').addEventListener('click', function(){
+      if (!state.bulkFileName) return;
+      state.bulkPhase = 'loading'; renderBulk();
+      setTimeout(function(){
+        state.bulkResults = parseAndValidate(state.bulkFileText);
+        state.bulkPhase = 'done';
+        renderBulk();
+      }, 700);
+    });
+  }
+
+  function wireBulk(){
+    $('bulk-back').addEventListener('click', function(){ nav('admin/users'); });
+  }
+
+  /* ---------------- shared list helpers ---------------- */
+  function loadingRowsHtml(cols, headers){
+    var template = cols.join(' ');
+    var head = '<div class="grid-head" style="grid-template-columns:' + template + ';">' + headers.map(function(h){ return '<div>' + h + '</div>'; }).join('') + '</div>';
+    var rows = '';
+    for (var i=0;i<5;i++){
+      rows += '<div style="display:grid; grid-template-columns:' + template + '; gap:8px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--border);">' +
+        cols.map(function(){ return '<div class="skeleton" style="height:12px; width:' + (50 + Math.round(Math.random()*20)) + '%;"></div>'; }).join('') + '</div>';
+    }
+    return '<div style="padding-top:0;">' + head + rows + '</div>';
+  }
+  function emptyStateHtml(title, bodyHtml, clearId){
+    return '<div class="empty-state"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" style="color:var(--text-3);"><circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="1.6"/><path d="M20 20l-4.8-4.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>' +
+      '<div style="font-size:15px; font-weight:600;">' + title + '</div>' +
+      '<div style="font-size:13px; color:var(--text-2);">' + bodyHtml + '</div>' +
+      '<button type="button" class="btn-secondary" id="' + clearId + '" style="margin-top:6px;">Clear search</button></div>';
+  }
+  function errorStateHtml(title, body, retryId){
+    return '<div class="error-state"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M12 3.5l9.5 16.5H2.5L12 3.5z" stroke="#B3261E" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 9.5v4.5" stroke="#B3261E" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="17" r="0.9" fill="#B3261E"/></svg>' +
+      '<div style="font-size:15px; font-weight:600;">' + title + '</div>' +
+      '<div style="font-size:13px; color:var(--text-2); max-width:320px;">' + body + '</div>' +
+      '<button type="button" class="btn-primary" style="width:auto; padding:0 16px; margin-top:6px;" id="' + retryId + '">Retry</button></div>';
+  }
+  function pagerHtml(label, page, totalPages, prevId, nextId){
+    return '<div class="pager"><div style="font-size:12px; color:var(--text-2);">' + label + '</div>' +
+      '<div class="pager-controls">' +
+      '<button type="button" class="pager-btn" id="' + prevId + '"' + (page <= 1 ? ' disabled' : '') + '>Prev</button>' +
+      '<div style="font-size:12px; color:var(--text-2);">Page ' + page + ' of ' + totalPages + '</div>' +
+      '<button type="button" class="pager-btn" id="' + nextId + '"' + (page >= totalPages ? ' disabled' : '') + '>Next</button>' +
+      '</div></div>';
+  }
+  function wirePager(scope, prevId, nextId, page, totalPages, onChange){
+    var prev = scope.querySelector('#' + prevId), next = scope.querySelector('#' + nextId);
+    if (prev) prev.addEventListener('click', function(){ if (page > 1) onChange(page - 1); });
+    if (next) next.addEventListener('click', function(){ if (page < totalPages) onChange(page + 1); });
+  }
+
+  /* ---------------- boot ---------------- */
+  function boot(){
+    wireLogin();
+    wireForgotReset();
+    wireChangePassword();
+    wireAccountMenu();
+    wirePatientSearch();
+    wireUsers();
+    wireBulk();
+    window.addEventListener('hashchange', route);
+    route();
+  }
+  if (document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', boot); }
+  else { boot(); }
+})();
+</script>

@@ -1,0 +1,180 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+    :root{
+      --bg:#F3F5F7; --surface:#FFFFFF; --border:#DFE4EA; --border-strong:#C7CFD8;
+      --text:#16202B; --text-2:#56677A; --text-3:#8A97A6;
+      --accent:#0B6E8C; --accent-hover:#075169; --accent-tint:#E5F1F5; --accent-tint-strong:#CFE7EE;
+      --error:#B3261E; --error-tint:#FBEAEA; --error-border:#F1B6B0;
+    }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:'IBM Plex Sans', system-ui, -apple-system, sans-serif; color:var(--text); background:var(--bg); -webkit-font-smoothing:antialiased; }
+    button{ font-family:inherit; cursor:pointer; }
+    input{ font-family:inherit; }
+    button:focus-visible, input:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+    @keyframes spin{ to{ transform:rotate(360deg); } }
+    .spinner{ animation: spin .7s linear infinite; }
+  </style>
+</helmet>
+<div style="width:1440px; height:900px; background:var(--bg); display:flex; align-items:center; justify-content:center;">
+  <div style="width:380px; display:flex; flex-direction:column; align-items:center; gap:24px;">
+
+    <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
+      <div style="width:36px; height:36px; border-radius:9px; background:var(--accent); display:flex; align-items:center; justify-content:center;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M2 12h4l2-7 4 14 3-9 2 4h5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+        <div style="font-size:16px; font-weight:700; letter-spacing:0.02em;">ARIS</div>
+        <div style="font-size:12px; color:var(--text-3);">Agentic Risk Intelligence System</div>
+      </div>
+    </div>
+
+    <sc-if value="{{success}}" hint-placeholder-val="{{false}}">
+      <div style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:32px; display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center;">
+        <div style="width:40px; height:40px; border-radius:999px; background:var(--accent-tint); display:flex; align-items:center; justify-content:center;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5L20 6" stroke="#0B6E8C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div style="font-size:16px; font-weight:600;">Signed in</div>
+        <div style="font-size:13px; color:var(--text-2); line-height:19px;">You're authenticated and a session token has been issued. Each ARIS screen is its own artboard on this canvas &#8212; continue exploring via Dashboard, Patient Search and Patient Detail.</div>
+        <button onClick="{{reset}}" style="margin-top:8px; height:36px; padding:0 16px; border-radius:6px; border:1px solid var(--border-strong); background:var(--surface); color:var(--text); font-size:13px; font-weight:600;">Sign in again</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{notSuccess}}" hint-placeholder-val="{{true}}">
+      <form onSubmit="{{handleSubmit}}" style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:32px; display:flex; flex-direction:column; gap:16px;">
+        <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:4px;">
+          <div style="font-size:18px; font-weight:600;">Sign in to ARIS</div>
+          <div style="font-size:13px; color:var(--text-2);">Enter your credentials to continue.</div>
+        </div>
+
+        <sc-if value="{{errorMessage}}" hint-placeholder-val="{{''}}">
+          <div style="display:flex; gap:8px; align-items:flex-start; background:var(--error-tint); border:1px solid var(--error-border); border-radius:6px; padding:10px 12px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex-shrink:0; margin-top:2px;"><path d="M12 3.5l9.5 16.5H2.5L12 3.5z" stroke="#B3261E" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 9.5v4.5" stroke="#B3261E" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="17" r="0.9" fill="#B3261E"/></svg>
+            <div style="font-size:13px; color:var(--error); line-height:18px;">{{errorMessage}}</div>
+          </div>
+        </sc-if>
+
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <label style="font-size:12px; font-weight:600; color:var(--text-2);">Username or email</label>
+          <input type="text" placeholder="e.g. m.chen" value="{{username}}" onInput="{{onUsernameChange}}" style="height:38px; padding:0 12px; border:1px solid {{fieldBorder}}; border-radius:6px; font-size:14px; color:var(--text); background:var(--surface);" />
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <label style="font-size:12px; font-weight:600; color:var(--text-2);">Password</label>
+          <div style="position:relative; display:flex; align-items:center;">
+            <input type="{{passwordFieldType}}" placeholder="Enter your password" value="{{password}}" onInput="{{onPasswordChange}}" style="width:100%; height:38px; padding:0 40px 0 12px; border:1px solid {{fieldBorder}}; border-radius:6px; font-size:14px; color:var(--text); background:var(--surface);" />
+            <button type="button" onClick="{{togglePassword}}" aria-label="Toggle password visibility" style="position:absolute; right:8px; background:none; border:none; padding:4px; display:flex; color:var(--text-3);">
+              <sc-if value="{{showPassword}}" hint-placeholder-val="{{false}}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 3l18 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M10.6 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17.9 17.9 0 0 1-3.5 4.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M6.1 6.1C3.4 7.9 2 11 2 12c0 0 1.6 3 4.6 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              </sc-if>
+              <sc-if value="{{passwordHidden}}" hint-placeholder-val="{{true}}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/></svg>
+              </sc-if>
+            </button>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; margin-top:-8px;">
+          <button type="button" style="background:none; border:none; padding:0; font-size:12px; color:var(--accent); font-family:inherit; cursor:pointer;">Forgot your password?</button>
+        </div>
+
+        <button type="submit" disabled="{{submitting}}" style="height:40px; border-radius:6px; border:none; background:{{buttonBg}}; color:white; font-size:14px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px; margin-top:4px;">
+          <sc-if value="{{submitting}}" hint-placeholder-val="{{false}}">
+            <svg class="spinner" width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="white" stroke-width="2.5" stroke-opacity="0.3"/><path d="M21 12a9 9 0 0 0-9-9" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
+          </sc-if>
+          <span>{{buttonLabel}}</span>
+        </button>
+
+        <div style="font-size:11px; color:var(--text-3); line-height:16px; font-style:italic; margin-top:4px;">Prototype tip: leave a field blank, or enter &#8220;wrong&#8221; as the password, to preview the error state.</div>
+      </form>
+    </sc-if>
+
+    <div style="font-size:11px; color:var(--text-3);">ARIS &#8212; Internal Clinical Platform</div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      username: '',
+      password: '',
+      showPassword: false,
+      submitting: false,
+      errorMessage: '',
+      success: false
+    };
+  }
+
+  onUsernameChange(e) {
+    this.setState({ username: e.target.value });
+  }
+
+  onPasswordChange(e) {
+    this.setState({ password: e.target.value });
+  }
+
+  togglePassword() {
+    this.setState({ showPassword: !this.state.showPassword });
+  }
+
+  handleSubmit(e) {
+    e.preventDefault();
+    const username = this.state.username.trim();
+    const password = this.state.password;
+    if (!username || !password) {
+      this.setState({ errorMessage: 'Enter your username and password.' });
+      return;
+    }
+    this.setState({ submitting: true, errorMessage: '' });
+    setTimeout(() => {
+      if (password.trim().toLowerCase() === 'wrong') {
+        this.setState({ submitting: false, errorMessage: 'Invalid credentials.' });
+      } else {
+        this.setState({ submitting: false, errorMessage: '', success: true });
+      }
+    }, 700);
+  }
+
+  reset() {
+    this.setState({
+      username: '', password: '', showPassword: false,
+      submitting: false, errorMessage: '', success: false
+    });
+  }
+
+  renderVals() {
+    const s = this.state;
+    return {
+      username: s.username,
+      password: s.password,
+      showPassword: s.showPassword,
+      passwordHidden: !s.showPassword,
+      passwordFieldType: s.showPassword ? 'text' : 'password',
+      submitting: s.submitting,
+      errorMessage: s.errorMessage,
+      success: s.success,
+      notSuccess: !s.success,
+      buttonLabel: s.submitting ? 'Signing in…' : 'Sign in',
+      buttonBg: s.submitting ? '#5B94A8' : 'var(--accent)',
+      fieldBorder: s.errorMessage ? 'var(--error-border)' : 'var(--border-strong)',
+      onUsernameChange: (e) => this.onUsernameChange(e),
+      onPasswordChange: (e) => this.onPasswordChange(e),
+      togglePassword: () => this.togglePassword(),
+      handleSubmit: (e) => this.handleSubmit(e),
+      reset: () => this.reset()
+    };
+  }
+}
+</script>
+</body>
+</html>
