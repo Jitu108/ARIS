@@ -1,6 +1,7 @@
 # ARIS — Project Plan
 
 **Derived from:** `ARIS — Complete Implementation and User Reference Documentation.md` (v2.0)
+**Companion document:** `ARIS — Technical Documentation.md` — whole-project architecture (services, data, security, deployment) behind this phasing
 **Assumptions:** Solo developer, vertical-slice delivery, Docker-first local environment
 **Status:** Draft — durations are estimates and should be revisited after Phase 1
 
@@ -57,6 +58,7 @@ Slices 1–3 fall in Phase 1–2; slice 4 anchors Phase 3; slice 5 anchors Phase
 
 ### Phase 1 — Platform, Identity & UI Foundation (§102)
 **Goal:** A working, authenticated, deployable shell — not just a backend skeleton.
+**Phase 1 documents (in `Documentations/Phases/`):** `ARIS — Phase 1 Functional Requirements.md` (what to build), `ARIS — Phase 1 Technical Documentation.md` (architecture, data models, API contracts, security, Docker Compose layout), `ARIS — Phase 1 Detailed Plan.md` (work breakdown and expanded exit criteria).
 
 - Backend: IdentityService (JWT, roles: Administrator/Clinician/Coder/RiskAnalyst/Auditor/Researcher), PatientService, HccMappingService and GapEngineService as thin stubs, Ocelot gateway, BuildingBlocks, health checks, OpenAPI.
 - Angular: login, app shell (header/sidebar), route guards, HTTP auth interceptor, dashboard shell, patient search, patient details, unauthorized/not-found pages.
