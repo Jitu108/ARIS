@@ -60,6 +60,62 @@ All inter-service and UI-to-gateway communication in Phase 1 is synchronous HTTP
 
 Per §111, no service reaches into another service's database. `IdentityService` and `PatientService` communicate only through their public HTTP APIs (in Phase 1, they don't need to call each other at all — Ocelot routes each request to exactly one service).
 
+### 1.3 .NET Solution Structure
+
+This is the fixed convention every backend service follows, set by the first service scaffolded (`IdentityService`) and mirrored exactly by every service added afterward — in Phase 1 and in every later phase. Grouping is by *concern* (`src/`, `tests/`) at the top level, with one subfolder per service under `src/Services/`, and four separate projects per service enforcing Clean Architecture's dependency direction at compile time, not just by convention.
+
+```text
+ARIS/
+├── ARIS.sln
+├── docker-compose.yml
+├── .env
+├── src/
+│   ├── BuildingBlocks/
+│   │   └── ARIS.BuildingBlocks/                    # shared, non-running library (§3.3, Detailed Plan §3)
+│   ├── Services/
+│   │   ├── IdentityService/
+│   │   │   ├── ARIS.IdentityService.Domain/         # entities (User, Role, RefreshToken, ...); zero project references
+│   │   │   ├── ARIS.IdentityService.Application/     # use cases, interfaces (e.g. IUserRepository); references Domain
+│   │   │   ├── ARIS.IdentityService.Infrastructure/  # EF Core, JWT issuance; implements Application's interfaces
+│   │   │   └── ARIS.IdentityService.Api/             # controllers, Program.cs, Dockerfile — composition root
+│   │   ├── PatientService/
+│   │   │   ├── ARIS.PatientService.Domain/
+│   │   │   ├── ARIS.PatientService.Application/
+│   │   │   ├── ARIS.PatientService.Infrastructure/
+│   │   │   └── ARIS.PatientService.Api/
+│   │   ├── HccMappingService/                        # stub — same 4-layer shape, thin, not collapsed
+│   │   │   ├── ARIS.HccMappingService.Domain/
+│   │   │   ├── ARIS.HccMappingService.Application/
+│   │   │   ├── ARIS.HccMappingService.Infrastructure/
+│   │   │   └── ARIS.HccMappingService.Api/
+│   │   └── GapEngineService/                         # stub, same shape
+│   │       ├── ARIS.GapEngineService.Domain/
+│   │       ├── ARIS.GapEngineService.Application/
+│   │       ├── ARIS.GapEngineService.Infrastructure/
+│   │       └── ARIS.GapEngineService.Api/
+│   └── Gateway/
+│       └── ARIS.Gateway/                             # Ocelot config + Dockerfile
+├── apps/
+│   └── aris-web/                                     # Angular — tree fixed separately in §6.1
+└── tests/
+    ├── ARIS.IdentityService.UnitTests/
+    ├── ARIS.IdentityService.IntegrationTests/
+    ├── ARIS.PatientService.UnitTests/
+    └── ARIS.PatientService.IntegrationTests/
+```
+
+**Naming**: `ARIS.<ServiceName>.<Layer>` for every project — predictable and greppable, matches the `ARIS —` prefix already used across the documentation set.
+
+**Reference direction**: `Api → Infrastructure → Application → Domain`. `Domain` has no project references at all. `Application` defines the interfaces `Infrastructure` implements (e.g., `IUserRepository`), so `Application` never references `Infrastructure`. `Api` is the composition root — the only layer wiring concrete `Infrastructure` implementations into DI — and the only layer that references `BuildingBlocks`' ASP.NET-specific middleware directly; `Domain`/`Application` may still use `BuildingBlocks`' framework-agnostic types (`Result<T>`, `BaseEntity`).
+
+**Stubs keep the full 4-layer shape** (`HccMappingService`, `GapEngineService`) — thin `Domain`/`Application` layers, but present. This is what makes the "stubs still go through the whole scaffold checklist" rule in the Detailed Plan mechanical rather than a per-service judgment call about how much structure to collapse.
+
+**Dockerfile placement**: one multi-stage Dockerfile per service, living at `src/Services/<Service>/ARIS.<Service>.Api/Dockerfile`, with the Docker build context set to the repository root so it can `COPY` both `BuildingBlocks` and the service's own layer projects (§7.1).
+
+**Tests**: `tests/` mirrors `src/Services/` by service, split into `<Service>.UnitTests` and `<Service>.IntegrationTests` per service — matches the testing strategy in §10 of the Detailed Plan without introducing a second test-layout convention.
+
+Every later-phase service (`DataIngestService`/Indexer in Phase 2, `RafCalculationService` in Phase 3, Embedding Worker/Agent Orchestrator in Phase 4, Analytics/Audit Processor in Phase 5) is added under `src/Services/` following this exact same shape — this section is the authoritative reference for that, not something each phase's Technical Documentation re-derives.
+
 ---
 
 ## 2. Technology Stack

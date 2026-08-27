@@ -307,7 +307,7 @@ User management's expanded scope (list, deactivate/reactivate, self-service pass
 
 | # | Task | Depends on |
 |---|---|---|
-| 1 | Repo/solution scaffolding, BuildingBlocks, Dockerfile template | — |
+| 1 | Repo/solution scaffolding (per Technical Documentation §1.3), BuildingBlocks, Dockerfile template | — |
 | 2 | SQL Server + Ocelot + health checks in Compose (all pointing at stub/empty services) | 1 |
 | 3 | IdentityService backend (auth, JWT, roles, refresh, audit events) | 1 |
 | 4 | Angular: login + auth state + route guards + HTTP interceptor | 3 |
