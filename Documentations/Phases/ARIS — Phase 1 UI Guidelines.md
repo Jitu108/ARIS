@@ -134,6 +134,29 @@ Both share the same anatomy: icon + text, 6–8px border radius, left-aligned ic
 
 A single dropdown (avatar + name + role, opened from the header) rather than separate controls for "switch role" and "log out" — this keeps header chrome minimal. In Phase 1 this menu also carries the role-preview affordance described in §7; that section explains why it's labeled the way it is and why it won't ship exactly like this in the real product.
 
+### 6.8 Status badge (active / inactive)
+
+A small pill: `--accent-tint` background + `--accent` text for "Active"; `--border` background + `--text-3` text for "Inactive" (deliberately neutral gray, not red — an inactive account isn't an error state, and red is reserved per §2's semantic rule). Used in the User List table (FR-6.7) next to each account's role(s).
+
+### 6.9 File upload (bulk import)
+
+A dropzone-style control: dashed 1px `--border-strong` border, 8px radius, centered upload icon + "Drop a CSV file here, or click to browse" + accepted-format hint ("username, email, displayName, roles columns"). On file selection, replace the dropzone with a compact "selected file" row (filename + size + a remove/change action) and enable the primary "Import" button — the button stays disabled until a file is selected, so there's never an empty-submission error to design around.
+
+### 6.10 Import results table
+
+Same grid-table anatomy as §6.4 (Patient Search results), with columns Row / Username / Status / Reason. Status renders as a small icon + word: a checkmark + "Created" (`--accent` tone) or an alert-triangle + "Failed" (`--error` tone) — the same two-color vocabulary as everywhere else in the system, not a third new color for "partial success." "Reason" is blank for created rows and holds the specific failure (e.g., "Username already in use") for failed ones, so an Administrator can fix and retry exactly the failed rows without re-reading the whole file.
+
+### 6.11 Reset-password action (form + success modal)
+
+A third row action on the User List (alongside Deactivate/Reactivate, §6.6-style secondary button), available only on active accounts — "Reset password." Unlike Deactivate, this doesn't open with a plain yes/no confirm — the Administrator is directly setting the account's new password, so the modal opens straight to a small form, reusing the same overlay anatomy as the deactivate dialog (§7.6):
+
+1. **Form step:** "Reset {name}'s password" + New password / Confirm new password fields (identical anatomy to §6.12's fields) + Cancel / Reset password. Submit is blocked with an inline "Passwords don't match" message until the two fields agree — the same client-side match check used everywhere else a new password is entered (§6.12, and the self-service reset-confirm screen). Filling in and matching two password fields is itself the deliberate, hard-to-do-by-accident action; it doesn't need a *second*, separate "are you sure" step in front of it.
+2. **Success step (replaces step 1 in the same modal, doesn't open a second one):** "Password reset for {name}" + "They've been signed out and will be required to set their own new password the next time they sign in." + a single "Done" button. The password itself is **never shown here or anywhere else** — the Administrator already knows it, since they typed it; this step exists to confirm the action succeeded and restate the consequence, not to redisplay a secret.
+
+### 6.12 Forced-password-change screen
+
+A standalone, shell-free screen (same visual family as Login/Forgot/Reset — centered card, no nav) shown immediately after logging in with a password an Administrator set (§6.11), before anything else in the app. Anatomy: title "Set a new password" + a short explanatory line ("Your password was reset by an administrator. Choose a new password to continue.") + New password / Confirm new password fields + a primary submit button. No "cancel," "skip," or "log out and come back later" affordance — per FR-6.16 this is not optional, and offering an escape hatch would misrepresent that.
+
 ---
 
 ## 7. State & Interaction Patterns
@@ -165,6 +188,22 @@ The 403 page keeps the full app shell (the user *is* authenticated, just lacks p
 
 Where a screen would otherwise look incomplete because a later-phase capability is missing (Patient Detail's clinical history, Dashboard's real metrics), say so directly in the UI rather than leaving a suspicious gap or, worse, faking placeholder content. This is a content pattern to reuse every time a future phase's capability is referenced before it exists.
 
+### 7.6 Deactivate confirmation (FR-6.8)
+
+Deactivating a user is serious enough to warrant a confirm-before-execute step — unlike most of this system (search, view, navigate), it immediately revokes another real person's access. A lightweight confirm dialog ("Deactivate Dr. Maya Chen? They'll be signed out immediately and won't be able to log in until reactivated.") is required before the `POST .../deactivate` call fires. Reactivation does **not** need the same confirmation — it's the reversible, low-stakes direction, and gating it identically would just be friction for no safety benefit.
+
+### 7.7 Password reset
+
+**7.7a — Administrator-initiated (FR-6.14, FR-6.15).** No separate "are you sure" step in front of this one — entering and matching a new password in two fields (§6.11) is already the deliberate action; adding a plain confirm dialog before it would just be redundant friction. What this flow does need, that deactivation doesn't: strict new/confirm match validation before submit is even allowed, since a typo here silently sets the wrong password for someone else's account. After submit, the success state confirms what happened without ever redisplaying the password — there's nothing to reveal, only something to protect (§6.11's success step).
+
+**7.7b — Self-service, same generic-response principle as login (FR-6.10, FR-6.11).** The forgot-password request screen shows one message regardless of outcome ("If an account exists for that username or email, a reset link has been sent") — visually and behaviorally this is the same pattern as §7.2's login error, just inverted (one message covering both a real and a fake account, instead of one message covering both wrong-username and wrong-password). Don't build two different confirmation states here; there is exactly one, always.
+
+The reset-confirm screen (opened via the emailed/logged link) treats an expired, already-used, or malformed token identically — one "This reset link is no longer valid" message (§6.6 error banner styling), never a distinct message per failure reason, since none of those reasons are actionable information for the user beyond "request a new link."
+
+### 7.8 Forced password change blocks everything (FR-6.16)
+
+Unlike every other restriction in this system, which blocks one *page* (Unauthorized, §7.4), a `mustChangePassword` session blocks the entire application except the change-password screen itself — there's no "not now" or partial access. Don't design this as a dismissible banner or a nag on top of the normal shell; it replaces the shell entirely (no header, no sidebar, same standalone-card treatment as Login) until it's resolved. This mirrors how the backend enforces it (§5.2 of the Technical Documentation: every endpoint except a small allow-list rejects the request) — the UI restriction and the API restriction should never disagree about what's reachable.
+
 ---
 
 ## 8. Implementation Notes for Angular
@@ -181,3 +220,4 @@ Where a screen would otherwise look incomplete because a later-phase capability 
 - **Responsive/mobile layout.** Phase 1 targets a desktop clinical/administrative workstation (assume ≥1280px viewport); no mobile or tablet layout is specified. Revisit if a real usage need for narrower viewports emerges.
 - **Dark theme.** Not built in Phase 1; tokens are centralized so it's addable later without a redesign.
 - **Any screen or state beyond what Phase 1 Functional Requirements defines** — no gap statuses, no evidence display, no AI/agent UI patterns. Those get their own UI guidelines when their phase begins, following the same method this document used (design system first, then component + state specs, then explicit interaction rules tied to that phase's FR-x.x IDs).
+- **Real email delivery.** The forgot/reset-password screens' visual design assumes a reset link exists and was delivered somehow; no email template or inbox mockup is in scope — the Technical Documentation §7.2 explicitly logs the link instead of sending real email in Phase 1.

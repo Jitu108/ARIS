@@ -120,8 +120,27 @@ Integration tests run the real ASP.NET Core pipeline (via `WebApplicationFactory
 | IT-ID-04 | `POST /identity/logout` revokes the current refresh token; a subsequent refresh attempt with it fails | FR-1.4 |
 | IT-ID-05 | `GET /identity/me` with a valid bearer token returns the correct user/roles | Profile retrieval |
 | IT-ID-06 | `GET /identity/me` with no token returns 401 | FR-2.1 |
-| IT-ID-07 | `POST /identity/users` as Administrator succeeds; as any other role returns 403 | FR-2.5, RBAC matrix |
-| IT-ID-08 | `GET /health/live` and `/health/ready` return 200 when the database is reachable, and `/health/ready` returns 503 when it is not | Health check contract |
+| IT-ID-07 | `POST /identity/users` as Administrator with valid, unique details succeeds and returns the created user (no password/hash in the response) | FR-6.1, FR-6.6 |
+| IT-ID-08 | `POST /identity/users` as any non-Administrator role returns 403 | FR-6.6, RBAC matrix |
+| IT-ID-09 | `POST /identity/users` with a username or email already in use returns 409 with a clear reason, not a generic failure | FR-6.4 |
+| IT-ID-10 | A just-created user can immediately `POST /identity/login` successfully with the credentials provided at creation | FR-6.5 |
+| IT-ID-11 | `GET /identity/users/{id}` as Administrator returns the correct user/roles; as any other role returns 403 | FR-6.3, RBAC matrix |
+| IT-ID-12 | `PUT /identity/users/{id}/roles` as Administrator updates the user's roles; a subsequent `GET /identity/users/{id}` reflects the change; as any other role returns 403 | FR-6.2, FR-6.6 |
+| IT-ID-13 | `GET /identity/users?query=` as Administrator returns correct paginated, filtered results, including correct empty result for a non-matching query; as any other role returns 403 | FR-6.7, RBAC matrix |
+| IT-ID-14 | `POST /identity/users/{id}/deactivate` as Administrator sets the account inactive, revokes its outstanding refresh token(s) (verified by attempting `POST /identity/refresh` with one → rejected), and a subsequent login attempt for that account returns the same generic 401 as any other invalid login (not a distinct "deactivated" message) | FR-6.8 |
+| IT-ID-15 | `POST /identity/users/{id}/deactivate` on an already-inactive account returns 409; as any non-Administrator role returns 403 | FR-6.6, FR-6.8 |
+| IT-ID-16 | `POST /identity/users/{id}/reactivate` restores an inactive account's ability to log in with its existing credentials; as any non-Administrator role returns 403 | FR-6.9, FR-6.6 |
+| IT-ID-17 | `POST /identity/password-reset/request` for an existing account and for a non-existent username/email both return the identical 200 message | FR-6.11 |
+| IT-ID-18 | `POST /identity/password-reset/request` for an existing, active account creates a usable `PasswordResetToken`; for a deactivated account, no token is created (verified indirectly — a subsequent confirm with any token issued for that request fails) | FR-6.10 |
+| IT-ID-19 | `POST /identity/password-reset/confirm` with a valid, unexpired, unused token updates the password (verified by logging in with the new password) and revokes the user's outstanding refresh tokens | FR-6.10 |
+| IT-ID-20 | `POST /identity/password-reset/confirm` with an expired token, an already-used token, and a malformed/unknown token each return 400 with the same non-technical message | FR-6.10 |
+| IT-ID-21 | `POST /identity/users/bulk-import` with a file containing a mix of valid and invalid rows (one duplicate username, one missing required field) creates exactly the valid rows and reports every row's outcome, including a specific reason for each failure | FR-6.12, FR-6.13 |
+| IT-ID-22 | `POST /identity/users/bulk-import` as any non-Administrator role returns 403; a malformed file (wrong columns) returns 400 with no rows created | FR-6.6, FR-6.12 |
+| IT-ID-23 | `POST /identity/users/{id}/reset-password {newPassword}` as Administrator on an active account returns 200, does not echo the password in the response, sets `MustChangePassword=1`, and revokes that user's outstanding refresh token(s) (verified by attempting `POST /identity/refresh` with one → rejected) | FR-6.14 |
+| IT-ID-24 | `POST /identity/users/{id}/reset-password` on an already-inactive account returns 409; as any non-Administrator role returns 403; with an empty/missing `newPassword` returns 400 | FR-6.6, FR-6.14, FR-6.15 |
+| IT-ID-25 | Logging in with the password set in IT-ID-23 succeeds and returns `mustChangePassword: true`; every endpoint except `POST /identity/change-password`, `GET /identity/me`, `POST /identity/logout`, and `POST /identity/refresh` returns 403 with the `password-change-required` type while that flag is set | FR-6.16 |
+| IT-ID-26 | `POST /identity/change-password` while `MustChangePassword=1` updates the password, clears the flag, and records `ForcedPasswordChangeCompleted`; a subsequent call to a previously-blocked endpoint (e.g. `GET /patients`) now succeeds | FR-6.16 |
+| IT-ID-27 | `GET /health/live` and `/health/ready` return 200 when the database is reachable, and `/health/ready` returns 503 when it is not | Health check contract |
 
 ### 5.2 PatientService
 
@@ -163,6 +182,15 @@ Run against the full Docker Compose stack, using a browser automation tool. Thes
 | E2E-10 | Unknown route | Navigate to a nonexistent path | Not-found page shown | FR-3.4 |
 | E2E-11 | Session expiry mid-use | Force token expiry (test hook or short-lived token in test config) → perform an action | Silent refresh succeeds and the action completes, OR the user is cleanly returned to login if refresh also fails — never a hung or broken UI | §6.3 refresh flow |
 | E2E-12 | Full stack boots clean | `docker compose up` from a clean state | All services report healthy; app is reachable and functional without manual intervention | §102 exit criterion 10 |
+| E2E-13 | User list | Log in as Administrator → open `/admin/users` | Paginated user list shown with correct loading/results/empty/error states (same patterns as E2E-05/06/07) | FR-6.7 |
+| E2E-14 | User list — non-Administrator | Log in as any non-Administrator role → navigate directly to `/admin/users` | Unauthorized page shown; no nav link to it was visible either | FR-6.6, FR-3.2 |
+| E2E-15 | Deactivate and reactivate a user | As Administrator, deactivate a seeded user from the list → attempt to log in as that user (separate session) → reactivate → attempt login again | Login fails with the generic error while deactivated; succeeds again after reactivation | FR-6.8, FR-6.9 |
+| E2E-16 | Forgot password — request | From the login screen, follow "forgot password" → submit a username/email | Identical generic confirmation shown regardless of whether the account exists (test both an existing and a made-up account) | FR-6.10, FR-6.11 |
+| E2E-17 | Forgot password — reset | Open the reset link produced by E2E-16's request (test-only way to retrieve it, e.g. from logs per §7.2 of the Technical Documentation) → submit a new password | Success message shown; can log in with the new password; cannot log in with the old one | FR-6.10 |
+| E2E-18 | Forgot password — invalid token | Open the reset-password screen with a made-up or already-used token → submit a new password | Clear, non-technical "link no longer valid" message; no password is changed | FR-6.10 |
+| E2E-19 | Bulk import | As Administrator, open `/admin/users/import` → upload a file with one valid and one duplicate-username row | Per-row result table shown: one row created, one row failed with "already in use" as the reason | FR-6.12, FR-6.13 |
+| E2E-20 | Administrator resets a password | As Administrator, from the user list, reset a user's password by entering a new password and a mismatched confirm value, then a matching one | Submission is blocked with an inline "don't match" message on the mismatched attempt; the matching attempt succeeds and shows a success state that never displays the password itself | FR-6.14, FR-6.15 |
+| E2E-21 | Forced password change end-to-end | In a separate session, log in as the user from E2E-20 using the exact password the Administrator entered | Redirected to a mandatory "set a new password" screen; attempting to navigate to Dashboard, Patients, or Users directly is blocked until a new password is set; after setting one, normal navigation works | FR-6.16 |
 
 ---
 
@@ -178,6 +206,11 @@ Not a full security audit (that's a later-phase concern), but the minimum Phase 
 | SEC-04 | Error responses (401/403/404/500) never include stack traces, SQL fragments, or internal identifiers | NFR-4 |
 | SEC-05 | Refresh tokens are never returned or logged in plaintext anywhere (API responses aside from the initial issuance, logs, error messages) | Token storage design |
 | SEC-06 | SQL injection attempt in the patient search query parameter is safely handled (parameterized query, no error leak, no unintended results) | Basic input-handling hygiene |
+| SEC-07 | Password reset tokens are never returned or logged in plaintext anywhere except the single reset-link log entry described in the Technical Documentation §7.2 (not in API responses, not in any other log line, not in error messages) | `PasswordResetToken` storage design |
+| SEC-08 | A used or expired password-reset token cannot be reused, even if resubmitted with a correct-format request | FR-6.10 single-use/expiry enforcement |
+| SEC-09 | A malformed CSV row in a bulk import (e.g., a role name that isn't one of the six defined roles) is rejected as a per-row failure with a clear reason, never silently ignored or crashing the whole import | FR-6.13, defensive input handling |
+| SEC-10 | The password an Administrator enters via `POST /identity/users/{id}/reset-password` never appears in any API response (including that same call's own response), logs, or audit events — the request carries it once, in transit, and nowhere else | FR-6.15 |
+| SEC-11 | A user with `MustChangePassword=1` cannot reach any endpoint outside the allow-list in §5.2 of the Technical Documentation, even with a technically valid, unexpired access token — verified directly against the backend, not just through the UI | FR-6.16 |
 
 ---
 
@@ -199,6 +232,8 @@ These are sanity checks against a small synthetic dataset, not a load/stress tes
 - All Phase 1 test data is synthetic — no real PHI, ever, in any test environment (consistent with §67 of the parent spec, applied early).
 - A fixed, version-controlled seed set is used for integration and E2E tests: a small number of users covering each of the six roles, and a small number of patients covering the search/pagination/empty-result/not-found cases explicitly (e.g., a patient with a common name to test partial match, an MRN-only lookup case, and a guaranteed-zero-match search term).
 - Seed data is deterministic and idempotent (safe to re-seed on every test run) — tests must not depend on data left over from a previous run.
+- The seed set includes at least one already-deactivated user (for reactivate tests to start from a known state) and enough distinct users to exercise the user-list pagination the same way the patient seed set exercises FR-4.2.
+- A small, version-controlled sample CSV file (valid rows plus at least one duplicate-username row and one malformed-role row) is checked in for bulk-import tests (IT-ID-21/22, SEC-09, E2E-19), so the "mixed success/failure" scenario is reproducible rather than assembled ad hoc per test run.
 
 ---
 
@@ -237,10 +272,25 @@ Given the solo-developer context established in the Project Plan, a full defect-
 | FR-1.4 (logout) | UT-NG-03 | IT-ID-04 | E2E-09 |
 | FR-1.5 (auth audit events) | UT-ID-08 | IT-ID-01–04 (implicitly, via event side effects) | — |
 | FR-2.1 (auth required) | UT-NG-04 | IT-ID-06, IT-PT-01 | E2E-03 |
-| FR-2.2 (role-restricted access) | UT-NG-05 | IT-ID-07, IT-PT-02 | — |
+| FR-2.2 (role-restricted access) | UT-NG-05 | IT-ID-08, IT-PT-02 | — |
 | FR-2.3 (clear unauthorized message) | — | — | E2E-04 |
 | FR-2.4 (backend enforces independently of UI) | — | IT-GW-01 | — |
-| FR-2.5 (role assignment) | — | IT-ID-07 | — |
+| FR-6.1 (create user) | — | IT-ID-07 | — |
+| FR-6.2 (assign/change role) | — | IT-ID-12 | — |
+| FR-6.3 (get user by id) | — | IT-ID-11 | — |
+| FR-6.4 (reject duplicate username/email) | — | IT-ID-09 | — |
+| FR-6.5 (new account usable immediately) | — | IT-ID-10 | — |
+| FR-6.6 (Administrator-only enforcement) | — | IT-ID-08, IT-ID-11, IT-ID-12, IT-ID-13, IT-ID-15, IT-ID-16, IT-ID-22, IT-ID-24 | E2E-14 |
+| FR-6.7 (list/browse users) | — | IT-ID-13 | E2E-13 |
+| FR-6.8 (deactivate) | — | IT-ID-14, IT-ID-15 | E2E-15 |
+| FR-6.9 (reactivate) | — | IT-ID-16 | E2E-15 |
+| FR-6.10 (self-service password reset) | — | IT-ID-18, IT-ID-19, IT-ID-20 | E2E-17, E2E-18 |
+| FR-6.11 (anti-enumeration on reset request) | — | IT-ID-17 | E2E-16 |
+| FR-6.12 (bulk import) | — | IT-ID-21, IT-ID-22 | E2E-19 |
+| FR-6.13 (per-row bulk import reporting) | — | IT-ID-21, SEC-09 | E2E-19 |
+| FR-6.14 (administrator resets password directly) | — | IT-ID-23, IT-ID-24 | E2E-20 |
+| FR-6.15 (new/confirm must match; password never echoed back) | — | IT-ID-24, SEC-10 | E2E-20 |
+| FR-6.16 (forced password change) | — | IT-ID-25, IT-ID-26, SEC-11 | E2E-21 |
 | FR-3.1 (consistent shell) | — | — | E2E-01 |
 | FR-3.3 (dashboard landing) | — | — | E2E-01 |
 | FR-3.4 (not-found page) | — | — | E2E-10 |

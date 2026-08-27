@@ -26,14 +26,15 @@ This plan translates the ARIS functional specification into an executable, phase
 
 | Phase | Focus | Key Backend | Key Angular | AI | Est. Duration (solo) |
 |---|---|---|---|---|---:|
-| 1 | Platform, Identity & UI Foundation | IdentityService, PatientService, HccMappingService (stub), GapEngineService (stub), Ocelot | Login, shell, patient search/details | — | 5–7 weeks |
+| 1 | Platform, Identity & UI Foundation | IdentityService (incl. full user management — list/deactivate/reactivate/self-service reset/admin reset/bulk import, forced-change gate), PatientService, HccMappingService (stub), GapEngineService (stub), Ocelot | Login, forgot/reset password, forced password change, shell, patient search/details, user list, bulk import | — | 9–12 weeks |
 | 2 | Clinical Data, Ingestion & Search | DataIngestService, RabbitMQ, Outbox, Indexer, OpenSearch | Advanced search, timeline, evidence view | — | 5–7 weeks |
 | 3 | Deterministic Risk Intelligence | HccMappingService (full), GapEngineService (full), RafCalculationService | Risk dashboard, gap review, RAF breakdown | — | 7–9 weeks |
 | 4 | RAG & Agentic Intelligence | Embedding Worker, Qdrant, Agent Orchestrator, guardrails | Ask ARIS, Explain Gap, evidence/citations UI | LLM/RAG/agents | 7–9 weeks |
 | 5 | Complete Clinical/Coding Workflows | Review, assignment, feedback, audit APIs | Persona workflows (clinician/coder/analyst/auditor) | Advanced workflow agents | 6–8 weeks |
 | 6 | Enterprise, Scale & Research | AWS readiness, observability, advanced security | Analytics/admin/research UI | Multi-agent research eval | 8–10 weeks (open-ended) |
 
-**Total to end of Phase 5 (production-usable platform): ~30–40 weeks.**
+**Total to end of Phase 5 (production-usable platform): ~34–45 weeks.**
+Phase 1's estimate has been re-baselined twice as user management grew from a minimal admin-bootstrap capability into a full feature: 5–7 → 8–11 weeks (list, deactivate/reactivate, self-service password reset, bulk import), then 8–11 → 9–12 weeks (administrator-initiated password reset + the forced-change-on-next-login gate) — see `ARIS — Phase 1 Detailed Plan.md` §11 for the reasoning.
 Phase 6 is ongoing/iterative rather than a hard finish line — treat it as a continuous track once Phase 5 exit criteria are met.
 
 These are full-time-equivalent estimates for one developer covering backend, frontend, infra, and AI integration. Part-time pace should scale proportionally. Re-baseline after Phase 1 once actual velocity is known.
@@ -129,11 +130,11 @@ Some concerns are listed under Phase 6 in the source doc but should be seeded mu
 
 | Milestone | End of | Cumulative Elapsed (est.) |
 |---|---|---:|
-| M1 — Authenticated shell + patient search live | Phase 1 | ~6 weeks |
-| M2 — Full ingestion → search pipeline live | Phase 2 | ~12 weeks |
-| M3 — Deterministic gap engine + RAF live (research baseline established) | Phase 3 | ~20 weeks |
-| M4 — Agentic "Ask ARIS" / Explain Gap live | Phase 4 | ~28 weeks |
-| M5 — All personas have complete workflows (Definition of Done met, §90) | Phase 5 | ~35 weeks |
+| M1 — Authenticated shell, patient search, and full user management live | Phase 1 | ~11 weeks |
+| M2 — Full ingestion → search pipeline live | Phase 2 | ~17 weeks |
+| M3 — Deterministic gap engine + RAF live (research baseline established) | Phase 3 | ~25 weeks |
+| M4 — Agentic "Ask ARIS" / Explain Gap live | Phase 4 | ~33 weeks |
+| M5 — All personas have complete workflows (Definition of Done met, §90) | Phase 5 | ~40 weeks |
 | M6 — Enterprise/AWS-ready + research framework operational | Phase 6 | ongoing |
 
 ---

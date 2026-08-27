@@ -538,3 +538,79 @@ This is architecture, not requirements or scheduling:
 - Functional behavior and acceptance criteria — see the functional specification and the phase-specific Functional Requirements documents.
 - Effort estimates, task sequencing, and risk registers — see the Project Plan and phase-specific Detailed Plan documents.
 - Exact field-by-field schemas and endpoint contracts for services not yet started — those are authored in that phase's own Technical Documentation when the phase begins, following the pattern set by `ARIS — Phase 1 Technical Documentation.md`.
+
+---
+
+## 18. Technology Stack (Proposed, by Phase)
+
+This consolidates the technology choices already implied throughout §2–§15 into a single reference. As with the rest of this document, each row is tagged with the phase that introduces it — nothing here should be adopted ahead of its tagged phase, and this table should be updated in place as choices are finalized or revised (e.g., a specific LLM/embedding provider is selected in Phase 4).
+
+### 18.1 Frontend & Gateway
+
+| Layer | Technology | Introduced |
+|---|---|---|
+| Frontend | Angular, TypeScript | Phase 1 |
+| API Gateway | Ocelot (.NET) | Phase 1 |
+| Production edge (WAF, load balancer) | AWS WAF + Load Balancer in front of the gateway (§15.2) | Phase 6 |
+
+### 18.2 Backend Services
+
+| Layer | Technology | Introduced |
+|---|---|---|
+| Backend services | ASP.NET Core (.NET), Clean Architecture per service | Phase 1 |
+| ORM / persistence | Entity Framework Core | Phase 1 |
+| API documentation | OpenAPI/Swagger per service | Phase 1 |
+
+### 18.3 Data & Messaging
+
+| Layer | Technology | Introduced |
+|---|---|---|
+| Primary database | SQL Server (one database per service, per §111) | Phase 1 |
+| Message broker | RabbitMQ, Outbox pattern (§6.1) | Phase 2 |
+| Production database | AWS RDS SQL Server | Phase 6 |
+| Production broker | Amazon MQ (RabbitMQ-compatible contracts retained, §15.2) | Phase 6 |
+| Object storage | AWS S3 | Phase 6 |
+
+### 18.4 Search & Retrieval
+
+| Layer | Technology | Introduced |
+|---|---|---|
+| Keyword / structured search | OpenSearch (§7.1) | Phase 2 |
+| Vector / semantic search | Qdrant (§7.1, §9.1) | Phase 4 |
+| Embedding model | Provider TBD — abstracted behind the Embedding Worker (§3, §7.3) | Phase 4 |
+
+### 18.5 AI / Agentic Layer
+
+| Layer | Technology | Introduced |
+|---|---|---|
+| LLM provider | Provider-abstracted (§9.1) — specific vendor/model selection is a Phase 4 decision, not fixed here | Phase 4 |
+| Agent orchestration | Agent Orchestrator, registered/permission-controlled tool set (§9.1) | Phase 4 |
+
+### 18.6 Auth & Security
+
+| Layer | Technology | Introduced |
+|---|---|---|
+| Auth tokens | JWT, RS256 signing (asymmetric, chosen to keep an external IdP option open — §10.1) | Phase 1 |
+| Secrets | Environment variables / Docker secrets | Phase 1 |
+| Authorization model | RBAC | Phase 1 |
+| External identity provider | OIDC / OAuth2 | Phase 6 |
+| Authorization model (extended) | ABAC (patient-level, organization-level) | Phase 6 |
+| Secrets management | AWS Secrets Manager, KMS | Phase 6 |
+| Encryption | Full at-rest encryption, managed key rotation | Phase 6 |
+
+### 18.7 Observability
+
+| Layer | Technology | Introduced |
+|---|---|---|
+| Correlation-ID propagation | Convention only (no backend yet, §12.1) | Phase 1 |
+| Tracing / metrics / logs / dashboards / alerts | OpenTelemetry, structured logs, CloudWatch (§12.2, §15.2) | Phase 6 |
+
+### 18.8 Deployment & Infrastructure
+
+| Environment | Platform | Introduced |
+|---|---|---|
+| Development | Docker, Docker Compose, Docker Hub (image registry) | Phase 1 |
+| Test | Docker / Kubernetes | Phase 1–2 (per §15.1) |
+| Production | AWS (EKS/ECS, RDS, networking, WAF, KMS, Secrets Manager, S3, CloudWatch, OpenSearch, Amazon MQ) | Phase 6 |
+
+Production images are always immutable version-tagged (e.g., `aris/patient-service:1.0.0` or `aris/patient-service:git-<commit>`), never a mutable `latest` tag (§15.3).
