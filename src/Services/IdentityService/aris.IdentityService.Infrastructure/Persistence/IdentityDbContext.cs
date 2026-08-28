@@ -1,3 +1,4 @@
+using aris.IdentityService.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace aris.IdentityService.Infrastructure.Persistence;
@@ -11,5 +12,32 @@ public sealed class IdentityDbContext : DbContext
 {
     public IdentityDbContext(DbContextOptions<IdentityDbContext> options) : base(options)
     {
+    }
+
+    public DbSet<User> Users
+    {
+        get { return Set<User>(); }
+    }
+
+    public DbSet<Role> Roles
+    {
+        get { return Set<Role>(); }
+    }
+
+    public DbSet<UserRole> UserRoles
+    {
+        get { return Set<UserRole>(); }
+    }
+
+    public DbSet<RefreshToken> RefreshTokens
+    {
+        get { return Set<RefreshToken>(); }
+    }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(IdentityDbContext).Assembly);
     }
 }

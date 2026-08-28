@@ -14,8 +14,10 @@ public static class ArisHealthCheckExtensions
 {
     public const string ReadyTag = "ready";
 
-    public static IHealthChecksBuilder AddArisHealthChecks(this IServiceCollection services) =>
-        services.AddHealthChecks();
+    public static IHealthChecksBuilder AddArisHealthChecks(this IServiceCollection services)
+    {
+        return services.AddHealthChecks();
+    }
 
     public static IEndpointRouteBuilder MapArisHealthChecks(this IEndpointRouteBuilder endpoints)
     {

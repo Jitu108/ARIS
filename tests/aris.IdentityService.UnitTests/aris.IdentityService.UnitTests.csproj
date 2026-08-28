@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Services\IdentityService\aris.IdentityService.Application\aris.IdentityService.Application.csproj" />
     <ProjectReference Include="..\..\src\Services\IdentityService\aris.IdentityService.Domain\aris.IdentityService.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Services\IdentityService\aris.IdentityService.Infrastructure\aris.IdentityService.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

@@ -28,8 +28,10 @@ public sealed class CorrelationIdMiddleware
 
 public static class CorrelationIdAccessor
 {
-    public static string GetCorrelationId(this HttpContext context) =>
-        context.Items.TryGetValue(CorrelationIdMiddleware.HeaderName, out var value) && value is string correlationId
+    public static string GetCorrelationId(this HttpContext context)
+    {
+        return context.Items.TryGetValue(CorrelationIdMiddleware.HeaderName, out var value) && value is string correlationId
             ? correlationId
             : context.TraceIdentifier;
+    }
 }
