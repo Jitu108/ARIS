@@ -1,0 +1,47 @@
+<div class="shell">
+  <header class="header">
+    <div class="brand">
+      <div class="product-mark">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M2 12h4l2-7 4 14 3-9 2 4h5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+      <div class="wordmark">ARIS</div>
+    </div>
+
+    <div class="account-menu">
+      <button class="account-menu-trigger" (click)="toggleMenu()">
+        <div class="avatar">{{ userInitials() }}</div>
+        <div class="account-info">
+          <div class="account-name">{{ userName() }}</div>
+          <div class="account-role">{{ roleLabel() }}</div>
+        </div>
+        <app-icon name="chevron-down" [size]="14" />
+      </button>
+
+      @if (menuOpen()) {
+        <div class="account-dropdown">
+          <div class="account-dropdown-header">
+            <div class="account-name">{{ userName() }}</div>
+            <div class="account-role">{{ roleLabel() }}</div>
+          </div>
+          <div class="divider"></div>
+          <button class="dropdown-row" (click)="logout()">Log out</button>
+        </div>
+      }
+    </div>
+  </header>
+
+  <div class="body">
+    <nav class="sidebar">
+      <div class="nav-item active">
+        <app-icon name="grid" [size]="18" />
+        Dashboard
+      </div>
+    </nav>
+
+    <main class="content">
+      <router-outlet />
+    </main>
+  </div>
+</div>

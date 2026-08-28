@@ -26,14 +26,20 @@ internal sealed class PhiSafeLogger<T> : IPhiSafeLogger<T>
         _logger = logger;
     }
 
-    public void LogInformation(string messageTemplate, params object?[] args) =>
+    public void LogInformation(string messageTemplate, params object?[] args)
+    {
         _logger.LogInformation(messageTemplate, args);
+    }
 
-    public void LogWarning(string messageTemplate, params object?[] args) =>
+    public void LogWarning(string messageTemplate, params object?[] args)
+    {
         _logger.LogWarning(messageTemplate, args);
+    }
 
-    public void LogError(Exception? exception, string messageTemplate, params object?[] args) =>
+    public void LogError(Exception? exception, string messageTemplate, params object?[] args)
+    {
         _logger.LogError(exception, messageTemplate, args);
+    }
 }
 
 public static class PhiSafeLoggingExtensions

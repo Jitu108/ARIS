@@ -1,0 +1,45 @@
+.page-title {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.page-subtitle {
+  font-size: 13px;
+  color: var(--text-2);
+  margin-top: 4px;
+  margin-bottom: 24px;
+}
+
+.placeholder-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 48px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.placeholder-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  background: var(--accent-tint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.placeholder-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.placeholder-text {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 19px;
+  max-width: 420px;
+}

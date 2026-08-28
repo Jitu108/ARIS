@@ -504,6 +504,7 @@ apps/aris-web/
 - Access token held in memory (application state), not `localStorage`, to reduce XSS exfiltration surface.
 - Refresh token handling: prefer an httpOnly, secure cookie set by the backend if the gateway/browser topology supports it in the dev environment; if not feasible in Phase 1, use a clearly-flagged interim storage approach with a follow-up noted for hardening — this trade-off should be revisited before Phase 6 security hardening, not left implicit.
 - `AuthInterceptor` attaches `Authorization: Bearer <accessToken>` to every outgoing API request; on a `401`, it attempts exactly one silent refresh, retries the original request once, and routes to `/login` on repeated failure.
+- Since refresh tokens are single-use with rotation (§5.1), concurrent requests that all hit `401` at once must not each independently call `/identity/refresh` — only the first triggers the call; subsequent 401s in flight during that window wait on its result and retry with the resulting token. Implemented as a shared in-flight refresh observable in `AuthInterceptor`, not a per-request refresh call.
 - `ErrorInterceptor` treats a `403` carrying the `password-change-required` problem-details `type` (§5.2) as a hard redirect to `/change-password`, distinct from a normal `403` (which routes to `/unauthorized`) — this is what keeps a user stuck in the forced-change state even if `MustChangePasswordGuard` were somehow bypassed client-side.
 
 ### 6.4 State handling for lists (search)

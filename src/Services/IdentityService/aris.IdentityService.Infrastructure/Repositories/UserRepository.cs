@@ -14,11 +14,13 @@ public sealed class UserRepository : IUserRepository
         _dbContext = dbContext;
     }
 
-    public Task<User?> GetByUsernameOrEmailAsync(string usernameOrEmail, CancellationToken cancellationToken) =>
-        _dbContext.Users
+    public Task<User?> GetByUsernameOrEmailAsync(string usernameOrEmail, CancellationToken cancellationToken)
+    {
+        return _dbContext.Users
             .Include(user => user.UserRoles)
             .ThenInclude(userRole => userRole.Role)
             .SingleOrDefaultAsync(
                 user => user.Username == usernameOrEmail || user.Email == usernameOrEmail,
                 cancellationToken);
+    }
 }

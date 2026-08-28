@@ -14,10 +14,25 @@ public sealed class IdentityDbContext : DbContext
     {
     }
 
-    public DbSet<User> Users => Set<User>();
-    public DbSet<Role> Roles => Set<Role>();
-    public DbSet<UserRole> UserRoles => Set<UserRole>();
-    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<User> Users
+    {
+        get { return Set<User>(); }
+    }
+
+    public DbSet<Role> Roles
+    {
+        get { return Set<Role>(); }
+    }
+
+    public DbSet<UserRole> UserRoles
+    {
+        get { return Set<UserRole>(); }
+    }
+
+    public DbSet<RefreshToken> RefreshTokens
+    {
+        get { return Set<RefreshToken>(); }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

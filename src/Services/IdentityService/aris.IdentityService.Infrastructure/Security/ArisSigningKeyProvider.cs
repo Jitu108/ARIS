@@ -16,7 +16,10 @@ public sealed class ArisSigningKey : IDisposable
     public required RSA Rsa { get; init; }
     public required string PublicKeyPem { get; init; }
 
-    public void Dispose() => Rsa.Dispose();
+    public void Dispose()
+    {
+        Rsa.Dispose();
+    }
 }
 
 public static class ArisSigningKeyProvider

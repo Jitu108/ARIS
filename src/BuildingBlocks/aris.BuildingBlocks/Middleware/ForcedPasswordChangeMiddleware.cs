@@ -54,6 +54,8 @@ public sealed class ForcedPasswordChangeMiddleware
         await _next(context);
     }
 
-    private static bool IsAllowListed(PathString path) =>
-        AllowListedPaths.Any(allowed => path.StartsWithSegments(allowed, StringComparison.OrdinalIgnoreCase));
+    private static bool IsAllowListed(PathString path)
+    {
+        return AllowListedPaths.Any(allowed => path.StartsWithSegments(allowed, StringComparison.OrdinalIgnoreCase));
+    }
 }

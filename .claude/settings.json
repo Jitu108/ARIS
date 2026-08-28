@@ -1,4 +1,13 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(dotnet ef *)",
+      "Bash(ASPNETCORE_ENVIRONMENT=Development ConnectionStrings__IdentityDb='Server=localhost,15544;Database=IdentityDb;User Id=sa;Password=Ar1sTest!Pass2026;TrustServerCertificate=True;' dotnet run --launch-profile http)",
+      "Bash(disown)",
+      "Bash(npm start *)",
+      "mcp__claude_ai_monday_com__search"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {
