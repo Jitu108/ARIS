@@ -1,4 +1,9 @@
+using aris.BuildingBlocks.Logging;
+using aris.IdentityService.Application.Abstractions;
+using aris.IdentityService.Application.Authentication;
 using aris.IdentityService.Infrastructure.Persistence;
+using aris.IdentityService.Infrastructure.Repositories;
+using aris.IdentityService.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,6 +16,20 @@ public static class DependencyInjection
     {
         services.AddDbContext<IdentityDbContext>(options =>
             options.UseSqlServer(configuration.GetConnectionString("IdentityDb")));
+
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
+        services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
+
+        var refreshTokenExpiryDays = configuration.GetValue<int?>("Jwt:RefreshTokenExpiryDays") ?? 14;
+        services.AddScoped<IAuthenticationService>(sp => new AuthenticationService(
+            sp.GetRequiredService<IUserRepository>(),
+            sp.GetRequiredService<IRefreshTokenRepository>(),
+            sp.GetRequiredService<IPasswordHasher>(),
+            sp.GetRequiredService<IJwtTokenGenerator>(),
+            sp.GetRequiredService<IPhiSafeLogger<AuthenticationService>>(),
+            refreshTokenExpiryDays));
 
         return services;
     }

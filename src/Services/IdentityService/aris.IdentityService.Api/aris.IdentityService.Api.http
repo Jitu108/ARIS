@@ -9,3 +9,13 @@ GET {{ARIS.IdentityService.Api_HostAddress}}/health/ready
 Accept: application/json
 
 ###
+
+POST {{ARIS.IdentityService.Api_HostAddress}}/identity/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "Admin@12345"
+}
+
+###

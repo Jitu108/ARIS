@@ -40,3 +40,11 @@ public sealed class ConflictAppException : AppException
     {
     }
 }
+
+public sealed class UnauthorizedAppException : AppException
+{
+    public UnauthorizedAppException(string detail)
+        : base("Invalid credentials.", detail, StatusCodes.Status401Unauthorized, "https://aris.dev/problems/invalid-credentials")
+    {
+    }
+}
