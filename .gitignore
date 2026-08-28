@@ -1,1 +1,16 @@
 .DS_Store
+
+## .NET
+bin/
+obj/
+*.user
+.vs/
+
+## Secrets — never committed (Technical Documentation §5.1/§7.2)
+.env
+*.pem
+appsettings.*.local.json
+
+## Angular / Node (added when apps/aris-web is scaffolded)
+node_modules/
+dist/
