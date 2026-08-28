@@ -1,0 +1,11 @@
+@ARIS.IdentityService.Api_HostAddress = http://localhost:5146
+
+GET {{ARIS.IdentityService.Api_HostAddress}}/health/live
+Accept: application/json
+
+###
+
+GET {{ARIS.IdentityService.Api_HostAddress}}/health/ready
+Accept: application/json
+
+###
