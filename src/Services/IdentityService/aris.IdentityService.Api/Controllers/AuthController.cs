@@ -29,4 +29,13 @@ public sealed class AuthController : ControllerBase
 
         return Ok(result.Value);
     }
+
+    [HttpPost("logout")]
+    [Authorize]
+    public async Task<IActionResult> Logout(LogoutRequestDto request, CancellationToken cancellationToken)
+    {
+        await _authenticationService.LogoutAsync(request.RefreshToken, cancellationToken);
+
+        return NoContent();
+    }
 }

@@ -95,6 +95,52 @@ public class AuthenticationServiceTests
         Assert.Equal("Invalid username or password.", result.Error.Message);
     }
 
+    [Fact] // FR-1.4: logging out with the token just issued by login revokes that exact token.
+    public async Task LogoutAsync_WithTokenIssuedByLogin_RevokesThatToken()
+    {
+        var user = CreateActiveAdminUser();
+        var sut = CreateSut(user, out var refreshTokenRepository);
+        var loginResult = await sut.LoginAsync(new LoginRequestDto("admin", "Admin@12345"), CancellationToken.None);
+
+        await sut.LogoutAsync(loginResult.Value.RefreshToken, CancellationToken.None);
+
+        var issuedToken = Assert.Single(refreshTokenRepository.Added);
+        Assert.NotNull(issuedToken.RevokedAtUtc);
+    }
+
+    [Fact] // FR-1.4: logout must not error/leak validity for a token it doesn't recognize.
+    public async Task LogoutAsync_WithUnknownToken_DoesNotThrowAndRevokesNothing()
+    {
+        var sut = CreateSut(CreateActiveAdminUser(), out var refreshTokenRepository);
+        await sut.LoginAsync(new LoginRequestDto("admin", "Admin@12345"), CancellationToken.None);
+
+        await sut.LogoutAsync("not-a-real-token", CancellationToken.None);
+
+        Assert.DoesNotContain(refreshTokenRepository.Added, token => token.RevokedAtUtc is not null);
+    }
+
+    [Fact] // FR-1.4: logging out twice with the same token is idempotent — the second call is a no-op.
+    public async Task LogoutAsync_CalledTwiceWithSameToken_IsIdempotent()
+    {
+        var sut = CreateSut(CreateActiveAdminUser(), out var refreshTokenRepository);
+        var loginResult = await sut.LoginAsync(new LoginRequestDto("admin", "Admin@12345"), CancellationToken.None);
+
+        await sut.LogoutAsync(loginResult.Value.RefreshToken, CancellationToken.None);
+        var revokedAtUtc = refreshTokenRepository.Added.Single().RevokedAtUtc;
+        await sut.LogoutAsync(loginResult.Value.RefreshToken, CancellationToken.None);
+
+        Assert.Equal(revokedAtUtc, refreshTokenRepository.Added.Single().RevokedAtUtc);
+    }
+
+    [Fact] // FR-1.4: a missing/blank refresh token is a no-op rather than a crash.
+    public async Task LogoutAsync_WithNullOrWhitespaceToken_DoesNotThrow()
+    {
+        var sut = CreateSut(CreateActiveAdminUser(), out _);
+
+        await sut.LogoutAsync(null, CancellationToken.None);
+        await sut.LogoutAsync("   ", CancellationToken.None);
+    }
+
     private sealed class FakeUserRepository : IUserRepository
     {
         private readonly User? _user;
@@ -112,6 +158,17 @@ public class AuthenticationServiceTests
         public Task AddAsync(RefreshToken refreshToken, CancellationToken cancellationToken)
         {
             Added.Add(refreshToken);
+            return Task.CompletedTask;
+        }
+
+        public Task<RefreshToken?> GetByTokenHashAsync(string tokenHash, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(Added.SingleOrDefault(token => token.TokenHash == tokenHash));
+        }
+
+        public Task RevokeAsync(RefreshToken refreshToken, CancellationToken cancellationToken)
+        {
+            refreshToken.RevokedAtUtc = DateTime.UtcNow;
             return Task.CompletedTask;
         }
     }

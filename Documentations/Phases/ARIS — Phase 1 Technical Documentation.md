@@ -430,6 +430,7 @@ No stack traces, connection strings, or internal identifiers are ever included (
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
 | `POST /identity/login` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `GET /identity/me` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `POST /identity/logout` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `POST /identity/users` | ✓ | – | – | – | – | – |
 | `GET /identity/users` (list) | ✓ | – | – | – | – | – |
 | `GET /identity/users/{id}` | ✓ | – | – | – | – | – |

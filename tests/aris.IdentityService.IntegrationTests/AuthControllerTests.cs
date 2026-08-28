@@ -1,8 +1,12 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using aris.IdentityService.Application.Authentication;
+using aris.IdentityService.Infrastructure.Persistence;
 using aris.IdentityService.Infrastructure.Security;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -90,5 +94,47 @@ public class AuthControllerTests : IClassFixture<TestWebApplicationFactory>
                 wrongPasswordProblem.GetProperty(field).ToString(),
                 unknownUserProblem.GetProperty(field).ToString());
         }
+    }
+
+    [Fact] // FR-1.4: logout with no bearer token is rejected — the endpoint requires an authenticated caller.
+    public async Task Logout_WithoutBearerToken_ReturnsUnauthorized()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/identity/logout", new LogoutRequestDto("whatever"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact] // FR-1.4: logging out with the refresh token issued by login revokes that token; reusing it then fails.
+    public async Task Logout_WithValidBearerAndOwnRefreshToken_RevokesTokenAndReturnsNoContent()
+    {
+        var client = _factory.CreateClient();
+        var loginResponse = await client.PostAsJsonAsync("/identity/login", new LoginRequestDto("admin", "Admin@12345"));
+        var loginBody = await loginResponse.Content.ReadFromJsonAsync<LoginResponseDto>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginBody!.AccessToken);
+
+        var logoutResponse = await client.PostAsJsonAsync("/identity/logout", new LogoutRequestDto(loginBody.RefreshToken));
+
+        Assert.Equal(HttpStatusCode.NoContent, logoutResponse.StatusCode);
+
+        var tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(loginBody.RefreshToken)));
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+        var revokedToken = dbContext.RefreshTokens.Single(token => token.TokenHash == tokenHash);
+        Assert.NotNull(revokedToken.RevokedAtUtc);
+    }
+
+    [Fact] // FR-1.4: an unrecognized refresh token is a silent no-op (204), not an error — logout must not leak token validity.
+    public async Task Logout_WithUnknownRefreshToken_StillReturnsNoContent()
+    {
+        var client = _factory.CreateClient();
+        var loginResponse = await client.PostAsJsonAsync("/identity/login", new LoginRequestDto("admin", "Admin@12345"));
+        var loginBody = await loginResponse.Content.ReadFromJsonAsync<LoginResponseDto>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginBody!.AccessToken);
+
+        var logoutResponse = await client.PostAsJsonAsync("/identity/logout", new LogoutRequestDto("not-a-real-refresh-token"));
+
+        Assert.Equal(HttpStatusCode.NoContent, logoutResponse.StatusCode);
     }
 }

@@ -6,6 +6,10 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface LogoutRequest {
+  refreshToken: string;
+}
+
 export interface LoginUser {
   id: string;
   displayName: string;

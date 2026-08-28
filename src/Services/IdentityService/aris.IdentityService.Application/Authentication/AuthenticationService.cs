@@ -75,6 +75,28 @@ public sealed class AuthenticationService : IAuthenticationService
         return Result.Success(response);
     }
 
+    public async Task LogoutAsync(string? refreshToken, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
+            return;
+        }
+
+        var tokenHash = HashToken(refreshToken);
+        var existingToken = await _refreshTokenRepository.GetByTokenHashAsync(tokenHash, cancellationToken);
+
+        // An unknown or already-revoked token is a no-op, not an error — logout must not become an
+        // oracle that reveals whether a given refresh token is (still) valid.
+        if (existingToken is null || existingToken.RevokedAtUtc is not null)
+        {
+            return;
+        }
+
+        await _refreshTokenRepository.RevokeAsync(existingToken, cancellationToken);
+
+        _logger.LogInformation("Refresh token revoked for user {UserId} via logout.", existingToken.UserId);
+    }
+
     private (RefreshToken Entity, string RawToken) CreateRefreshToken(Guid userId)
     {
         var rawToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64))
@@ -82,18 +104,21 @@ public sealed class AuthenticationService : IAuthenticationService
             .Replace('+', '-')
             .Replace('/', '_');
 
-        var tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(rawToken)));
-
         var entity = new RefreshToken
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            TokenHash = tokenHash,
+            TokenHash = HashToken(rawToken),
             ExpiresAtUtc = DateTime.UtcNow.AddDays(_refreshTokenExpiryDays),
             CreatedAtUtc = DateTime.UtcNow,
             CreatedBy = "system",
         };
 
         return (entity, rawToken);
+    }
+
+    private static string HashToken(string rawToken)
+    {
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(rawToken)));
     }
 }
