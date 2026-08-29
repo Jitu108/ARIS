@@ -1,7 +1,7 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
-import { LoginRequest, LoginResponse, LoginUser } from './auth.models';
+import { Observable, catchError, of, tap } from 'rxjs';
+import { LoginRequest, LoginResponse, LoginUser, LogoutRequest } from './auth.models';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -27,11 +27,28 @@ export class AuthService {
     );
   }
 
-  // Client-side only — POST /identity/logout doesn't exist yet (TARIS-012).
   logout(): void {
+    const accessToken = this.accessToken;
+    const refreshToken = this.refreshToken;
+
+    // Clear client-side session state up front — protected pages/data must become inaccessible
+    // (FR-1.4) even if the server-side revoke call below fails or never completes. The access
+    // token is captured above and attached explicitly, since by request time authInterceptor
+    // would otherwise find it already cleared.
     this.accessToken = null;
     this.refreshToken = null;
     this._currentUser.set(null);
+
+    if (refreshToken) {
+      this.http
+        .post<void>(
+          '/identity/logout',
+          { refreshToken } satisfies LogoutRequest,
+          accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : {},
+        )
+        .pipe(catchError(() => of(void 0)))
+        .subscribe();
+    }
   }
 
   getAccessToken(): string | null {
