@@ -5,7 +5,9 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using aris.IdentityService.Application.Abstractions;
 using aris.IdentityService.Application.Authentication;
+using aris.IdentityService.Domain.Entities;
 using aris.IdentityService.Infrastructure.Persistence;
 using aris.IdentityService.Infrastructure.Security;
 using Microsoft.Extensions.DependencyInjection;
@@ -96,6 +98,76 @@ public class AuthControllerTests : IClassFixture<TestWebApplicationFactory>
         }
     }
 
+    [Fact] // IT-ID-03: POST /identity/refresh with a valid refresh token returns a new pair and revokes the old one (reuse then rejected).
+    public async Task Refresh_WithValidRefreshToken_ReturnsNewTokenPairAndRejectsReuseOfTheOldOne()
+    {
+        var client = _factory.CreateClient();
+        var loginResponse = await client.PostAsJsonAsync("/identity/login", new LoginRequestDto("admin", "Admin@12345"));
+        var loginBody = await loginResponse.Content.ReadFromJsonAsync<LoginResponseDto>();
+
+        var refreshResponse = await client.PostAsJsonAsync("/identity/refresh", new RefreshRequestDto(loginBody!.RefreshToken));
+
+        Assert.Equal(HttpStatusCode.OK, refreshResponse.StatusCode);
+        var refreshBody = await refreshResponse.Content.ReadFromJsonAsync<LoginResponseDto>();
+        Assert.NotNull(refreshBody);
+        Assert.NotEqual(loginBody.RefreshToken, refreshBody!.RefreshToken);
+
+        var reuseResponse = await client.PostAsJsonAsync("/identity/refresh", new RefreshRequestDto(loginBody.RefreshToken));
+        Assert.Equal(HttpStatusCode.Unauthorized, reuseResponse.StatusCode);
+
+        // Reuse must also have revoked the token issued by the refresh itself (whole-chain revocation).
+        var newTokenResponse = await client.PostAsJsonAsync("/identity/refresh", new RefreshRequestDto(refreshBody.RefreshToken));
+        Assert.Equal(HttpStatusCode.Unauthorized, newTokenResponse.StatusCode);
+    }
+
+    [Fact] // Concurrency guard: two requests racing to rotate the exact same refresh token must not both succeed.
+    public async Task Refresh_ConcurrentRotationOfSameToken_OnlyOneRotationSucceeds()
+    {
+        var client = _factory.CreateClient();
+        var loginResponse = await client.PostAsJsonAsync("/identity/login", new LoginRequestDto("admin", "Admin@12345"));
+        var loginBody = await loginResponse.Content.ReadFromJsonAsync<LoginResponseDto>();
+        var tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(loginBody!.RefreshToken)));
+
+        // Two separate scopes/DbContexts both read the same still-active token before either
+        // writes — simulating two /refresh requests racing on the same presented token.
+        using var scopeA = _factory.Services.CreateScope();
+        using var scopeB = _factory.Services.CreateScope();
+        var repositoryA = scopeA.ServiceProvider.GetRequiredService<IRefreshTokenRepository>();
+        var repositoryB = scopeB.ServiceProvider.GetRequiredService<IRefreshTokenRepository>();
+        var tokenSeenByA = await repositoryA.GetByTokenHashAsync(tokenHash, CancellationToken.None);
+        var tokenSeenByB = await repositoryB.GetByTokenHashAsync(tokenHash, CancellationToken.None);
+
+        var resultA = await repositoryA.RotateAsync(tokenSeenByA!, CreateReplacementToken(tokenSeenByA!.UserId), CancellationToken.None);
+        var resultB = await repositoryB.RotateAsync(tokenSeenByB!, CreateReplacementToken(tokenSeenByB!.UserId), CancellationToken.None);
+
+        Assert.True(resultA);
+        Assert.False(resultB);
+    }
+
+    private static RefreshToken CreateReplacementToken(Guid userId)
+    {
+        return new RefreshToken
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            TokenHash = Guid.NewGuid().ToString("N"),
+            ExpiresAtUtc = DateTime.UtcNow.AddDays(1),
+            CreatedAtUtc = DateTime.UtcNow,
+            CreatedBy = "system",
+            RowVersion = Guid.NewGuid().ToByteArray(),
+        };
+    }
+
+    [Fact] // Refresh with an unrecognized token returns a generic 401, not a crash.
+    public async Task Refresh_WithUnknownToken_ReturnsUnauthorized()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/identity/refresh", new RefreshRequestDto("not-a-real-refresh-token"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
     [Fact] // FR-1.4: logout with no bearer token is rejected — the endpoint requires an authenticated caller.
     public async Task Logout_WithoutBearerToken_ReturnsUnauthorized()
     {
@@ -106,7 +178,7 @@ public class AuthControllerTests : IClassFixture<TestWebApplicationFactory>
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
-    [Fact] // FR-1.4: logging out with the refresh token issued by login revokes that token; reusing it then fails.
+    [Fact] // IT-ID-04 / FR-1.4: logging out with the refresh token issued by login revokes that token; a subsequent refresh with it then fails.
     public async Task Logout_WithValidBearerAndOwnRefreshToken_RevokesTokenAndReturnsNoContent()
     {
         var client = _factory.CreateClient();
@@ -123,6 +195,9 @@ public class AuthControllerTests : IClassFixture<TestWebApplicationFactory>
         var dbContext = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
         var revokedToken = dbContext.RefreshTokens.Single(token => token.TokenHash == tokenHash);
         Assert.NotNull(revokedToken.RevokedAtUtc);
+
+        var refreshAfterLogout = await client.PostAsJsonAsync("/identity/refresh", new RefreshRequestDto(loginBody.RefreshToken));
+        Assert.Equal(HttpStatusCode.Unauthorized, refreshAfterLogout.StatusCode);
     }
 
     [Fact] // FR-1.4: an unrecognized refresh token is a silent no-op (204), not an error — logout must not leak token validity.

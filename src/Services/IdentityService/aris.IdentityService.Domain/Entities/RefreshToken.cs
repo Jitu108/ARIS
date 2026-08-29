@@ -9,6 +9,7 @@ public sealed class RefreshToken : BaseEntity<Guid>
     public required DateTime ExpiresAtUtc { get; set; }
     public DateTime? RevokedAtUtc { get; set; }
     public Guid? ReplacedByTokenId { get; set; }
+    public byte[]? RowVersion { get; set; }
 
     public User? User { get; set; }
 }

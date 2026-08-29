@@ -12,6 +12,11 @@ public sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refresh
         builder.HasKey(token => token.Id);
         builder.Property(token => token.TokenHash).IsRequired();
         builder.HasIndex(token => token.TokenHash).IsUnique();
+        // App-managed (not IsRowVersion()) so the optimistic-concurrency guard behaves identically
+        // on every provider this context runs against, including SQLite in tests, which has no
+        // native auto-updating rowversion column type — see RefreshTokenRepository for where this
+        // value is actually bumped on every write.
+        builder.Property(token => token.RowVersion).IsConcurrencyToken();
 
         builder.HasOne(token => token.User)
             .WithMany()

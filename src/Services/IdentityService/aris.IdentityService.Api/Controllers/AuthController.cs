@@ -30,6 +30,20 @@ public sealed class AuthController : ControllerBase
         return Ok(result.Value);
     }
 
+    [HttpPost("refresh")]
+    [AllowAnonymous]
+    public async Task<ActionResult<LoginResponseDto>> Refresh(RefreshRequestDto request, CancellationToken cancellationToken)
+    {
+        var result = await _authenticationService.RefreshAsync(request.RefreshToken, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            throw new UnauthorizedAppException(result.Error.Message);
+        }
+
+        return Ok(result.Value);
+    }
+
     [HttpPost("logout")]
     [Authorize]
     public async Task<IActionResult> Logout(LogoutRequestDto request, CancellationToken cancellationToken)

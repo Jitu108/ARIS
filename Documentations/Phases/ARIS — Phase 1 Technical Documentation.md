@@ -411,6 +411,7 @@ No stack traces, connection strings, or internal identifiers are ever included (
 ### 5.1 Authentication mechanics
 
 - Access token: JWT, RS256-signed, short-lived (target 15–30 min). Claims: `sub` (user id), `roles` (array), `name`, standard `iat`/`exp`/`iss`/`aud`.
+- This elapsed-time expiry (access token lifetime, refresh token lifetime, and silent refresh in §6.3/§8.2) is what satisfies FR-1.3 in full — Phase 1 has no separate real-time idle/inactivity timer (§11).
 - Refresh token: opaque random value, stored server-side only as a hash, long-lived, single-use with rotation (each refresh revokes the presented token and issues a new one; reuse of a revoked token revokes the entire chain for that user as a compromise signal).
 - RS256 (asymmetric) is used specifically so a public key can validate tokens without sharing the private signing key — this keeps the door open to an external OIDC provider in a later phase without redesigning token validation in every service (§94).
 - Signing key and connection strings are supplied via environment variables / Docker secrets in Phase 1, never committed to source control. A managed Secrets Manager is a Phase 6 concern.
@@ -732,3 +733,4 @@ To keep this document bounded to Phase 1, the following are deliberately absent 
 - LLM/agent integration of any kind (Phase 4, §105)
 - ABAC, patient-level authorization, OIDC/external IdP integration, secrets manager, KMS (Phase 6, §107)
 - Distributed tracing backend/dashboards (Phase 6, §107) — only the correlation-ID convention is established now
+- Client-side idle/inactivity detection (mouse/keyboard activity tracking, an idle-timeout warning modal) — FR-1.3 is satisfied by elapsed-time token expiry + silent refresh (§5.1, §6.3, §8.2) alone; a real-time idle timer is not part of Phase 1's design

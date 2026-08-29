@@ -12,6 +12,9 @@ public sealed class AuthenticationService : IAuthenticationService
     private static readonly Error InvalidCredentialsError =
         new("Identity.InvalidCredentials", "Invalid username or password.");
 
+    private static readonly Error InvalidRefreshTokenError =
+        new("Identity.InvalidRefreshToken", "Invalid or expired refresh token.");
+
     // Verified against when no user exists, so an unknown username still pays the same BCrypt cost
     // as a real login attempt — without this, the short-circuited hash check would make login
     // attempts against unknown/inactive accounts measurably faster, turning FR-1.2's identical
@@ -53,10 +56,7 @@ public sealed class AuthenticationService : IAuthenticationService
             return Result.Failure<LoginResponseDto>(InvalidCredentialsError);
         }
 
-        var roles = user.UserRoles
-            .Where(userRole => userRole.Role is not null)
-            .Select(userRole => userRole.Role!.Name)
-            .ToArray();
+        var roles = GetRoleNames(user);
 
         var accessToken = _jwtTokenGenerator.Generate(user, roles);
         var (refreshTokenEntity, rawRefreshToken) = CreateRefreshToken(user.Id);
@@ -64,6 +64,69 @@ public sealed class AuthenticationService : IAuthenticationService
         await _refreshTokenRepository.AddAsync(refreshTokenEntity, cancellationToken);
 
         _logger.LogInformation("User {UserId} authenticated successfully.", user.Id);
+
+        var response = new LoginResponseDto(
+            accessToken.Token,
+            rawRefreshToken,
+            accessToken.ExpiresInSeconds,
+            new LoginUserDto(user.Id, user.DisplayName, roles),
+            user.MustChangePassword);
+
+        return Result.Success(response);
+    }
+
+    public async Task<Result<LoginResponseDto>> RefreshAsync(string? refreshToken, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
+            return Result.Failure<LoginResponseDto>(InvalidRefreshTokenError);
+        }
+
+        var tokenHash = HashToken(refreshToken);
+        var existingToken = await _refreshTokenRepository.GetByTokenHashAsync(tokenHash, cancellationToken);
+
+        if (existingToken is null)
+        {
+            return Result.Failure<LoginResponseDto>(InvalidRefreshTokenError);
+        }
+
+        if (existingToken.RevokedAtUtc is not null)
+        {
+            // A refresh token is single-use; presenting one that's already revoked (i.e. already
+            // rotated) means it was captured and replayed by someone else. Treat the whole chain
+            // as compromised rather than trusting just this one token (CLAUDE.md refresh-token rule).
+            await _refreshTokenRepository.RevokeAllActiveForUserAsync(existingToken.UserId, cancellationToken);
+            _logger.LogWarning("Refresh token reuse detected for user {UserId}; all active sessions revoked.", existingToken.UserId);
+            return Result.Failure<LoginResponseDto>(InvalidRefreshTokenError);
+        }
+
+        if (existingToken.ExpiresAtUtc <= DateTime.UtcNow)
+        {
+            return Result.Failure<LoginResponseDto>(InvalidRefreshTokenError);
+        }
+
+        var user = await _userRepository.GetByIdAsync(existingToken.UserId, cancellationToken);
+
+        if (user is null || !user.IsActive)
+        {
+            return Result.Failure<LoginResponseDto>(InvalidRefreshTokenError);
+        }
+
+        var roles = GetRoleNames(user);
+
+        var accessToken = _jwtTokenGenerator.Generate(user, roles);
+        var (newRefreshTokenEntity, rawRefreshToken) = CreateRefreshToken(user.Id);
+
+        var rotated = await _refreshTokenRepository.RotateAsync(existingToken, newRefreshTokenEntity, cancellationToken);
+
+        if (!rotated)
+        {
+            // Another request rotated this same token first — a concurrent replay, not this
+            // caller's fault, but it must fail the same generic way as any other invalid token.
+            return Result.Failure<LoginResponseDto>(InvalidRefreshTokenError);
+        }
+
+        _logger.LogInformation("Refresh token rotated for user {UserId}.", user.Id);
 
         var response = new LoginResponseDto(
             accessToken.Token,
@@ -97,6 +160,14 @@ public sealed class AuthenticationService : IAuthenticationService
         _logger.LogInformation("Refresh token revoked for user {UserId} via logout.", existingToken.UserId);
     }
 
+    private static string[] GetRoleNames(User user)
+    {
+        return user.UserRoles
+            .Where(userRole => userRole.Role is not null)
+            .Select(userRole => userRole.Role!.Name)
+            .ToArray();
+    }
+
     private (RefreshToken Entity, string RawToken) CreateRefreshToken(Guid userId)
     {
         var rawToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64))
@@ -112,6 +183,7 @@ public sealed class AuthenticationService : IAuthenticationService
             ExpiresAtUtc = DateTime.UtcNow.AddDays(_refreshTokenExpiryDays),
             CreatedAtUtc = DateTime.UtcNow,
             CreatedBy = "system",
+            RowVersion = Guid.NewGuid().ToByteArray(),
         };
 
         return (entity, rawToken);
