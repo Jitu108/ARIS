@@ -141,6 +141,78 @@ public class AuthenticationServiceTests
         await sut.LogoutAsync("   ", CancellationToken.None);
     }
 
+    [Fact] // UT-ID-04: refresh rotation issues a new token and marks the presented one revoked.
+    public async Task RefreshAsync_WithValidToken_IssuesNewTokenAndRevokesPresentedOne()
+    {
+        var user = CreateActiveAdminUser();
+        var sut = CreateSut(user, out var refreshTokenRepository);
+        var loginResult = await sut.LoginAsync(new LoginRequestDto("admin", "Admin@12345"), CancellationToken.None);
+        var presentedToken = loginResult.Value.RefreshToken;
+
+        var refreshResult = await sut.RefreshAsync(presentedToken, CancellationToken.None);
+
+        Assert.True(refreshResult.IsSuccess);
+        Assert.NotEqual(presentedToken, refreshResult.Value.RefreshToken);
+        Assert.Equal(2, refreshTokenRepository.Added.Count);
+        var oldToken = refreshTokenRepository.Added[0];
+        var newToken = refreshTokenRepository.Added[1];
+        Assert.NotNull(oldToken.RevokedAtUtc);
+        Assert.Equal(newToken.Id, oldToken.ReplacedByTokenId);
+        Assert.Null(newToken.RevokedAtUtc);
+    }
+
+    [Fact] // UT-ID-05: reuse of an already-revoked (rotated) refresh token is rejected and revokes the whole chain.
+    public async Task RefreshAsync_WithAlreadyRotatedToken_IsRejectedAndRevokesAllActiveTokensForUser()
+    {
+        var user = CreateActiveAdminUser();
+        var sut = CreateSut(user, out var refreshTokenRepository);
+        var loginResult = await sut.LoginAsync(new LoginRequestDto("admin", "Admin@12345"), CancellationToken.None);
+        var originalToken = loginResult.Value.RefreshToken;
+        await sut.RefreshAsync(originalToken, CancellationToken.None);
+
+        var reuseResult = await sut.RefreshAsync(originalToken, CancellationToken.None);
+
+        Assert.True(reuseResult.IsFailure);
+        Assert.Equal("Invalid or expired refresh token.", reuseResult.Error.Message);
+        Assert.All(refreshTokenRepository.Added, token => Assert.NotNull(token.RevokedAtUtc));
+    }
+
+    [Fact] // Refresh with an unrecognized token fails with the generic error, not a crash.
+    public async Task RefreshAsync_WithUnknownToken_ReturnsGenericInvalidRefreshTokenError()
+    {
+        var sut = CreateSut(CreateActiveAdminUser(), out _);
+
+        var result = await sut.RefreshAsync("not-a-real-token", CancellationToken.None);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("Invalid or expired refresh token.", result.Error.Message);
+    }
+
+    [Fact] // A missing/blank refresh token is rejected rather than crashing.
+    public async Task RefreshAsync_WithNullOrWhitespaceToken_ReturnsGenericInvalidRefreshTokenError()
+    {
+        var sut = CreateSut(CreateActiveAdminUser(), out _);
+
+        var result = await sut.RefreshAsync(null, CancellationToken.None);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("Invalid or expired refresh token.", result.Error.Message);
+    }
+
+    [Fact] // A refresh token belonging to a now-deactivated user is rejected even though the token itself hasn't expired.
+    public async Task RefreshAsync_ForDeactivatedUser_ReturnsGenericInvalidRefreshTokenError()
+    {
+        var user = CreateActiveAdminUser();
+        var sut = CreateSut(user, out _);
+        var loginResult = await sut.LoginAsync(new LoginRequestDto("admin", "Admin@12345"), CancellationToken.None);
+        user.IsActive = false;
+
+        var result = await sut.RefreshAsync(loginResult.Value.RefreshToken, CancellationToken.None);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("Invalid or expired refresh token.", result.Error.Message);
+    }
+
     private sealed class FakeUserRepository : IUserRepository
     {
         private readonly User? _user;
@@ -149,6 +221,9 @@ public class AuthenticationServiceTests
 
         public Task<User?> GetByUsernameOrEmailAsync(string usernameOrEmail, CancellationToken cancellationToken) =>
             Task.FromResult(_user is not null && _user.Username == usernameOrEmail ? _user : null);
+
+        public Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
+            Task.FromResult(_user is not null && _user.Id == id ? _user : null);
     }
 
     private sealed class FakeRefreshTokenRepository : IRefreshTokenRepository
@@ -169,6 +244,25 @@ public class AuthenticationServiceTests
         public Task RevokeAsync(RefreshToken refreshToken, CancellationToken cancellationToken)
         {
             refreshToken.RevokedAtUtc = DateTime.UtcNow;
+            return Task.CompletedTask;
+        }
+
+        public Task<bool> RotateAsync(RefreshToken currentToken, RefreshToken newToken, CancellationToken cancellationToken)
+        {
+            currentToken.RevokedAtUtc = DateTime.UtcNow;
+            currentToken.ReplacedByTokenId = newToken.Id;
+            Added.Add(newToken);
+            return Task.FromResult(true);
+        }
+
+        public Task RevokeAllActiveForUserAsync(Guid userId, CancellationToken cancellationToken)
+        {
+            var revokedAtUtc = DateTime.UtcNow;
+            foreach (var token in Added.Where(token => token.UserId == userId && token.RevokedAtUtc is null))
+            {
+                token.RevokedAtUtc = revokedAtUtc;
+            }
+
             return Task.CompletedTask;
         }
     }

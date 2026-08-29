@@ -42,7 +42,7 @@ Role-specific workflows (pre-visit prep for Clinician, work queues for Coder, po
 |---|---|---|---|---|
 | FR-1.1 | A user shall be able to log in with a username/identifier and password. | All roles | Given valid credentials, when submitted, then the user is authenticated and lands on the application shell. | Must |
 | FR-1.2 | The system shall reject invalid credentials without revealing whether the username or password was incorrect. | All roles | Given an invalid username or wrong password, when login is attempted, then a generic "invalid credentials" message is shown — never "user not found" vs. "wrong password." | Must |
-| FR-1.3 | An authenticated session shall expire automatically after a period of inactivity/time, requiring re-authentication. | All roles | Given an expired session, when the user takes an action, then they are returned to login without data loss they'd notice as a crash. | Must |
+| FR-1.3 | An authenticated session shall expire automatically over elapsed session time, requiring re-authentication once that session can no longer be renewed. | All roles | Given a session whose underlying credentials have lapsed and cannot be silently renewed, when the user next takes an action, then they are returned to login without data loss they'd notice as a crash. | Must |
 | FR-1.4 | A user shall be able to log out explicitly. | All roles | Given an active session, when the user selects "logout," then the session ends and protected pages/data become inaccessible. | Must |
 | FR-1.5 | The system shall record each login success, login failure, and logout as an auditable event, even though no audit UI exists yet. | System | Given any login attempt or logout, then an event is recorded with actor (if known), outcome, and timestamp. | Should |
 
@@ -138,6 +138,7 @@ The Administrator role owns user management in ARIS — provisioning the account
 - A user has one or more of six defined roles: Administrator, Clinician, Coder, RiskAnalyst, Auditor, Researcher (§94).
 - A user with no role assigned has no access to any protected functionality.
 - Authentication failures never reveal whether the username exists.
+- FR-1.3's session expiry is elapsed-time-based (the session's underlying access/refresh credentials lapse over time and are silently renewed while still valid), not a real-time idle/activity-monitoring feature — Phase 1 does not track mouse/keyboard activity or present an idle-timeout warning. A session ends when it can no longer be silently renewed, regardless of whether the user was actively working right up to that point.
 - Patient-level access restriction (i.e., "which specific patients can this user see") does not exist yet in Phase 1 — access control in this phase is role-based only. This is a known, intentional scope boundary, not a gap to fix within Phase 1 (§95 introduces finer-grained authorization in a later phase).
 - No clinical documentation, coding, or risk-adjustment decision can be made in Phase 1 — there is nothing yet to decide on. This phase is discovery/navigation only.
 - Only an Administrator may perform any user-management action — create, list, deactivate/reactivate, change roles, or bulk-import — on another user's identity.

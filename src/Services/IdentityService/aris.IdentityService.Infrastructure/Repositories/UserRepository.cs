@@ -23,4 +23,12 @@ public sealed class UserRepository : IUserRepository
                 user => user.Username == usernameOrEmail || user.Email == usernameOrEmail,
                 cancellationToken);
     }
+
+    public Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
+    {
+        return _dbContext.Users
+            .Include(user => user.UserRoles)
+            .ThenInclude(userRole => userRole.Role)
+            .SingleOrDefaultAsync(user => user.Id == id, cancellationToken);
+    }
 }
