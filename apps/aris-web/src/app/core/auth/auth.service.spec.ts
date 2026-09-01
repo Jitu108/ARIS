@@ -75,4 +75,65 @@ describe('AuthService', () => {
 
     httpMock.expectNone('/identity/logout');
   });
+
+  it('refresh() sends the current refresh token and adopts the rotated pair on success', () => {
+    login();
+
+    let result: LoginResponse | undefined;
+    service.refresh().subscribe((response) => (result = response));
+
+    const req = httpMock.expectOne('/identity/refresh');
+    expect(req.request.body).toEqual({ refreshToken: 'refresh-token' });
+
+    const rotated: LoginResponse = { ...loginResponse, accessToken: 'access-token-2', refreshToken: 'refresh-token-2' };
+    req.flush(rotated);
+
+    expect(result).toEqual(rotated);
+    expect(service.getAccessToken()).toBe('access-token-2');
+  });
+
+  it('refresh() coalesces concurrent callers onto a single HTTP request', () => {
+    login();
+
+    let first: LoginResponse | undefined;
+    let second: LoginResponse | undefined;
+    service.refresh().subscribe((response) => (first = response));
+    service.refresh().subscribe((response) => (second = response));
+
+    const rotated: LoginResponse = { ...loginResponse, accessToken: 'access-token-2', refreshToken: 'refresh-token-2' };
+    httpMock.expectOne('/identity/refresh').flush(rotated);
+
+    expect(first).toEqual(rotated);
+    expect(second).toEqual(rotated);
+  });
+
+  it('refresh() issues a fresh request once a prior one has settled', () => {
+    login();
+
+    service.refresh().subscribe();
+    httpMock.expectOne('/identity/refresh').flush({ ...loginResponse, refreshToken: 'refresh-token-2' });
+
+    service.refresh().subscribe();
+    const secondReq = httpMock.expectOne('/identity/refresh');
+    expect(secondReq.request.body).toEqual({ refreshToken: 'refresh-token-2' });
+    secondReq.flush({ ...loginResponse, refreshToken: 'refresh-token-3' });
+  });
+
+  it('refresh() errors without an HTTP call when there is no session to refresh', () => {
+    let error: unknown;
+    service.refresh().subscribe({ error: (err) => (error = err) });
+
+    expect(error).toBeInstanceOf(Error);
+    httpMock.expectNone('/identity/refresh');
+  });
+
+  it('clearSession() drops the session without calling the server', () => {
+    login();
+
+    service.clearSession();
+
+    expect(service.isAuthenticated()).toBe(false);
+    expect(service.getAccessToken()).toBeNull();
+    httpMock.expectNone('/identity/logout');
+  });
 });
