@@ -1,17 +1,25 @@
 import { Component, computed, signal } from '@angular/core';
-import { Router, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
-import { IconComponent } from '../../shared/icons/icon.component';
+import { IconComponent, IconName } from '../../shared/icons/icon.component';
+
+interface NavItem {
+  label: string;
+  icon: IconName;
+  route: string;
+}
 
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [RouterOutlet, IconComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, IconComponent],
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss',
 })
 export class ShellComponent {
   readonly menuOpen = signal(false);
+
+  readonly navItems: readonly NavItem[] = [{ label: 'Dashboard', icon: 'grid', route: '/' }];
 
   readonly userName = computed(() => this.authService.currentUser()?.displayName ?? '');
   readonly roleLabel = computed(() => this.authService.currentUser()?.roles?.[0] ?? '');

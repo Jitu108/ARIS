@@ -34,10 +34,17 @@
 
   <div class="body">
     <nav class="sidebar">
-      <div class="nav-item active">
-        <app-icon name="grid" [size]="18" />
-        Dashboard
-      </div>
+      @for (item of navItems; track item.route) {
+        <a
+          class="nav-item"
+          [routerLink]="item.route"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
+          <app-icon [name]="item.icon" [size]="18" />
+          {{ item.label }}
+        </a>
+      }
     </nav>
 
     <main class="content">
