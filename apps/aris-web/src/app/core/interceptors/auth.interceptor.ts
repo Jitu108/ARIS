@@ -1,12 +1,12 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { catchError, throwError } from 'rxjs';
+import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 
-// Attaches the bearer token to every request and, on 401, clears the session and redirects to
-// /login. Does NOT attempt a silent refresh — POST /identity/refresh doesn't exist yet
-// (TARIS-013), which is where that retry-once-then-redirect step gets added.
+// Attaches the bearer token to every request. On a 401 from any other endpoint, attempts exactly
+// one silent refresh (POST /identity/refresh) and retries the original request once; if the
+// refresh itself fails, clears the session and redirects to /login — Technical Documentation §8.2.
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   const router = inject(Router);
@@ -19,13 +19,23 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   return next(authedReq).pipe(
     catchError((error: unknown) => {
       // A failed /identity/login attempt is its own 401, not an expired session — LoginComponent
-      // handles that error directly, so don't treat it as a session invalidation here.
-      const isLoginRequest = req.url.startsWith('/identity/login');
-      if (!isLoginRequest && error instanceof HttpErrorResponse && error.status === 401) {
-        authService.logout();
-        router.navigateByUrl('/login');
+      // handles that error directly. A failed /identity/refresh call means the refresh token
+      // itself is no longer usable, so retrying it here would only loop.
+      const isAuthEndpoint = req.url.startsWith('/identity/login') || req.url.startsWith('/identity/refresh');
+      if (isAuthEndpoint || !(error instanceof HttpErrorResponse) || error.status !== 401) {
+        return throwError(() => error);
       }
-      return throwError(() => error);
+
+      return authService.refresh().pipe(
+        switchMap((response) =>
+          next(req.clone({ setHeaders: { Authorization: `Bearer ${response.accessToken}` } })),
+        ),
+        catchError((refreshError: unknown) => {
+          authService.clearSession();
+          router.navigateByUrl('/login');
+          return throwError(() => refreshError);
+        }),
+      );
     }),
   );
 };

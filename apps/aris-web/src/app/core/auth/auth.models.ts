@@ -10,6 +10,10 @@ export interface LogoutRequest {
   refreshToken: string;
 }
 
+export interface RefreshRequest {
+  refreshToken: string;
+}
+
 export interface LoginUser {
   id: string;
   displayName: string;
