@@ -159,6 +159,8 @@
   font-size: 14px;
   font-weight: 500;
   color: var(--text-2);
+  text-decoration: none;
+  cursor: pointer;
 
   &.active {
     color: var(--accent);
