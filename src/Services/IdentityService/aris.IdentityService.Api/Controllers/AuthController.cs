@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using aris.BuildingBlocks.Exceptions;
 using aris.IdentityService.Application.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -51,5 +52,16 @@ public sealed class AuthController : ControllerBase
         await _authenticationService.LogoutAsync(request.RefreshToken, cancellationToken);
 
         return NoContent();
+    }
+
+    [HttpGet("me")]
+    [Authorize]
+    public ActionResult<LoginUserDto> Me()
+    {
+        var id = Guid.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)!.Value);
+        var displayName = User.FindFirst("name")!.Value;
+        var roles = User.FindAll("roles").Select(claim => claim.Value).ToArray();
+
+        return Ok(new LoginUserDto(id, displayName, roles));
     }
 }

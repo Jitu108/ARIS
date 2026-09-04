@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -49,6 +50,10 @@ public static class JwtValidationExtensions
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
+                // Without this, the handler silently renames standard short claim names (e.g. "sub")
+                // to long legacy URIs before they reach ClaimsPrincipal, which breaks NameClaimType
+                // below and any code (e.g. GET /identity/me) that reads claims by their literal name.
+                options.MapInboundClaims = false;
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
@@ -63,7 +68,16 @@ public static class JwtValidationExtensions
                 };
             });
 
-        services.AddAuthorization();
+        // FR-2.1: every request is authenticated-only by default. An endpoint must opt OUT via
+        // [AllowAnonymous] (login, refresh, health checks) rather than opt IN via [Authorize] —
+        // this stops a future controller action from being silently public just because someone
+        // forgot the attribute.
+        services.AddAuthorization(options =>
+        {
+            options.FallbackPolicy = new AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser()
+                .Build();
+        });
 
         return services;
     }
