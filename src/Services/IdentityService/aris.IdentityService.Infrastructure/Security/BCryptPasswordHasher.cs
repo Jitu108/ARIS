@@ -8,4 +8,9 @@ public sealed class BCryptPasswordHasher : IPasswordHasher
     {
         return BCrypt.Net.BCrypt.Verify(password, passwordHash);
     }
+
+    public string Hash(string password)
+    {
+        return BCrypt.Net.BCrypt.HashPassword(password);
+    }
 }

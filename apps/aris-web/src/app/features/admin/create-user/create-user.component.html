@@ -1,0 +1,64 @@
+<div class="page-title">Create user</div>
+<div class="page-subtitle">Provision a new ARIS account. It becomes usable to log in immediately.</div>
+
+<form class="form-card" (ngSubmit)="handleSubmit()">
+  @if (errorMessage()) {
+    <div class="banner error-banner">
+      <app-icon name="alert-triangle" [size]="16" />
+      <div>{{ errorMessage() }}</div>
+    </div>
+  }
+
+  @if (successMessage()) {
+    <div class="banner success-banner">
+      <app-icon name="checkmark" [size]="16" />
+      <div>{{ successMessage() }}</div>
+    </div>
+  }
+
+  <div class="field">
+    <label for="username">Username</label>
+    <input id="username" type="text" name="username" placeholder="e.g. m.chen" [(ngModel)]="username" />
+  </div>
+
+  <div class="field">
+    <label for="email">Email</label>
+    <input id="email" type="email" name="email" placeholder="e.g. m.chen@aris.local" [(ngModel)]="email" />
+  </div>
+
+  <div class="field">
+    <label for="displayName">Display name</label>
+    <input id="displayName" type="text" name="displayName" placeholder="e.g. Maria Chen" [(ngModel)]="displayName" />
+  </div>
+
+  <div class="field">
+    <label for="password">Initial password</label>
+    <input id="password" type="password" name="password" placeholder="Enter an initial password" [(ngModel)]="password" />
+  </div>
+
+  <div class="field">
+    <label>Roles</label>
+    <div class="role-list">
+      @for (role of availableRoles; track role) {
+        <label class="role-option">
+          <input
+            type="checkbox"
+            [checked]="selectedRoles.has(role)"
+            (change)="toggleRole(role)"
+          />
+          <span>{{ role }}</span>
+        </label>
+      }
+    </div>
+  </div>
+
+  <button type="submit" class="submit-button" [disabled]="submitting()">
+    @if (submitting()) {
+      <svg class="spinner" width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" stroke="white" stroke-width="2.5" stroke-opacity="0.3" />
+        <path d="M21 12a9 9 0 0 0-9-9" stroke="white" stroke-width="2.5" stroke-linecap="round" />
+      </svg>
+    }
+    <span>{{ submitting() ? 'Creating…' : 'Create user' }}</span>
+  </button>
+</form>

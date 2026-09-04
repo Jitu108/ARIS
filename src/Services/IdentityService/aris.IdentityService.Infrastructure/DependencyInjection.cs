@@ -1,6 +1,7 @@
 using aris.BuildingBlocks.Logging;
 using aris.IdentityService.Application.Abstractions;
 using aris.IdentityService.Application.Authentication;
+using aris.IdentityService.Application.Users;
 using aris.IdentityService.Infrastructure.Persistence;
 using aris.IdentityService.Infrastructure.Repositories;
 using aris.IdentityService.Infrastructure.Security;
@@ -19,8 +20,11 @@ public static class DependencyInjection
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IRoleRepository, RoleRepository>();
+        services.AddScoped<IAuthAuditEventRepository, AuthAuditEventRepository>();
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
         services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
+        services.AddScoped<IUserManagementService, UserManagementService>();
 
         var refreshTokenExpiryDays = configuration.GetValue<int?>("Jwt:RefreshTokenExpiryDays") ?? 14;
         services.AddScoped<IAuthenticationService>(sp => new AuthenticationService(

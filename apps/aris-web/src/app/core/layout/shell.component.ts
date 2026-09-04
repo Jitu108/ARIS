@@ -19,7 +19,15 @@ interface NavItem {
 export class ShellComponent {
   readonly menuOpen = signal(false);
 
-  readonly navItems: readonly NavItem[] = [{ label: 'Dashboard', icon: 'grid', route: '/' }];
+  readonly navItems = computed<readonly NavItem[]>(() => {
+    const items: NavItem[] = [{ label: 'Dashboard', icon: 'grid', route: '/' }];
+
+    if (this.authService.currentUser()?.roles.includes('Administrator')) {
+      items.push({ label: 'Create User', icon: 'users', route: '/admin/users/new' });
+    }
+
+    return items;
+  });
 
   readonly userName = computed(() => this.authService.currentUser()?.displayName ?? '');
   readonly roleLabel = computed(() => this.authService.currentUser()?.roles?.[0] ?? '');

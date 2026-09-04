@@ -34,6 +34,11 @@ public sealed class IdentityDbContext : DbContext
         get { return Set<RefreshToken>(); }
     }
 
+    public DbSet<AuthAuditEvent> AuthAuditEvents
+    {
+        get { return Set<AuthAuditEvent>(); }
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
