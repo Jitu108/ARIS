@@ -151,6 +151,125 @@ public class UsersControllerTests : IClassFixture<TestWebApplicationFactory>
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    [Fact] // IT-ID-11 / FR-6.3: an Administrator can retrieve a specific user's account/role details by id.
+    public async Task GetUser_AsAdministrator_ReturnsUserWithRoles()
+    {
+        var client = await CreateAuthenticatedAdminClientAsync();
+        var createResponse = await client.PostAsJsonAsync(
+            "/identity/users",
+            new CreateUserRequestDto("detailuser1", "detailuser1@aris.local", "P@ssword123", "Detail User One", new[] { "Coder" }));
+        var created = await createResponse.Content.ReadFromJsonAsync<CreateUserResponseDto>();
+
+        var response = await client.GetAsync($"/identity/users/{created!.Id}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<UserSummaryDto>();
+        Assert.NotNull(body);
+        Assert.Equal("detailuser1", body!.Username);
+        Assert.Equal(new[] { "Coder" }, body.Roles);
+    }
+
+    [Fact] // IT-ID-11 / FR-6.3: an unknown user id is a 404.
+    public async Task GetUser_WithUnknownId_ReturnsNotFound()
+    {
+        var client = await CreateAuthenticatedAdminClientAsync();
+
+        var response = await client.GetAsync($"/identity/users/{Guid.NewGuid()}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact] // IT-ID-11 / FR-6.6: a non-Administrator cannot retrieve a user's account/role details, enforced server-side regardless of the UI.
+    public async Task GetUser_AsNonAdministrator_ReturnsForbidden()
+    {
+        var adminClient = await CreateAuthenticatedAdminClientAsync();
+        var createResponse = await adminClient.PostAsJsonAsync(
+            "/identity/users",
+            new CreateUserRequestDto("plaindetailcoder", "plaindetailcoder@aris.local", "P@ssword123", "Plain Detail Coder", new[] { "Coder" }));
+        var created = await createResponse.Content.ReadFromJsonAsync<CreateUserResponseDto>();
+
+        var coderClient = _factory.CreateClient();
+        var loginResponse = await coderClient.PostAsJsonAsync("/identity/login", new LoginRequestDto("plaindetailcoder", "P@ssword123"));
+        var loginBody = await loginResponse.Content.ReadFromJsonAsync<LoginResponseDto>();
+        coderClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginBody!.AccessToken);
+
+        var response = await coderClient.GetAsync($"/identity/users/{created!.Id}");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact] // IT-ID-12 / FR-6.2: an Administrator updates a user's roles, and a subsequent GET reflects the change.
+    public async Task ChangeUserRoles_AsAdministrator_UpdatesRolesAndPersists()
+    {
+        var client = await CreateAuthenticatedAdminClientAsync();
+        var createResponse = await client.PostAsJsonAsync(
+            "/identity/users",
+            new CreateUserRequestDto("rolechangeuser1", "rolechangeuser1@aris.local", "P@ssword123", "Role Change User One", new[] { "Coder" }));
+        var created = await createResponse.Content.ReadFromJsonAsync<CreateUserResponseDto>();
+
+        var putResponse = await client.PutAsJsonAsync(
+            $"/identity/users/{created!.Id}/roles",
+            new ChangeUserRolesRequestDto(new[] { "Coder", "RiskAnalyst" }));
+
+        Assert.Equal(HttpStatusCode.OK, putResponse.StatusCode);
+        var putBody = await putResponse.Content.ReadFromJsonAsync<UserSummaryDto>();
+        Assert.NotNull(putBody);
+        Assert.Equal(new[] { "Coder", "RiskAnalyst" }, putBody!.Roles.OrderBy(role => role));
+
+        var getResponse = await client.GetAsync($"/identity/users/{created.Id}");
+        var getBody = await getResponse.Content.ReadFromJsonAsync<UserSummaryDto>();
+        Assert.Equal(new[] { "Coder", "RiskAnalyst" }, getBody!.Roles.OrderBy(role => role));
+    }
+
+    [Fact] // IT-ID-12 / FR-6.2: an unrecognized role name is rejected.
+    public async Task ChangeUserRoles_WithUnknownRole_ReturnsBadRequest()
+    {
+        var client = await CreateAuthenticatedAdminClientAsync();
+        var createResponse = await client.PostAsJsonAsync(
+            "/identity/users",
+            new CreateUserRequestDto("rolechangeuser2", "rolechangeuser2@aris.local", "P@ssword123", "Role Change User Two", new[] { "Coder" }));
+        var created = await createResponse.Content.ReadFromJsonAsync<CreateUserResponseDto>();
+
+        var response = await client.PutAsJsonAsync(
+            $"/identity/users/{created!.Id}/roles",
+            new ChangeUserRolesRequestDto(new[] { "NotARole" }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact] // IT-ID-12 / FR-6.2: changing roles for a non-existent user is a 404.
+    public async Task ChangeUserRoles_WithUnknownUserId_ReturnsNotFound()
+    {
+        var client = await CreateAuthenticatedAdminClientAsync();
+
+        var response = await client.PutAsJsonAsync(
+            $"/identity/users/{Guid.NewGuid()}/roles",
+            new ChangeUserRolesRequestDto(new[] { "Coder" }));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact] // IT-ID-12 / FR-6.6: a non-Administrator cannot change a user's roles, enforced server-side regardless of the UI.
+    public async Task ChangeUserRoles_AsNonAdministrator_ReturnsForbidden()
+    {
+        var adminClient = await CreateAuthenticatedAdminClientAsync();
+        var createResponse = await adminClient.PostAsJsonAsync(
+            "/identity/users",
+            new CreateUserRequestDto("plainrolechangecoder", "plainrolechangecoder@aris.local", "P@ssword123", "Plain Role Change Coder", new[] { "Coder" }));
+        var created = await createResponse.Content.ReadFromJsonAsync<CreateUserResponseDto>();
+
+        var coderClient = _factory.CreateClient();
+        var loginResponse = await coderClient.PostAsJsonAsync("/identity/login", new LoginRequestDto("plainrolechangecoder", "P@ssword123"));
+        var loginBody = await loginResponse.Content.ReadFromJsonAsync<LoginResponseDto>();
+        coderClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginBody!.AccessToken);
+
+        var response = await coderClient.PutAsJsonAsync(
+            $"/identity/users/{created!.Id}/roles",
+            new ChangeUserRolesRequestDto(new[] { "RiskAnalyst" }));
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     private async Task<HttpClient> CreateAuthenticatedAdminClientAsync()
     {
         var client = _factory.CreateClient();

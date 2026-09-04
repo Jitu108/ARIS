@@ -110,6 +110,74 @@ public sealed class UserManagementService : IUserManagementService
         return new ListUsersResponseDto(items, normalizedPage, normalizedPageSize, totalCount);
     }
 
+    public async Task<UserSummaryDto> GetUserByIdAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var user = await _userRepository.GetByIdAsync(id, cancellationToken);
+        if (user is null)
+        {
+            throw new NotFoundAppException("User not found.");
+        }
+
+        return ToSummaryDto(user);
+    }
+
+    public async Task<UserSummaryDto> ChangeUserRolesAsync(
+        Guid id,
+        ChangeUserRolesRequestDto request,
+        Guid actorUserId,
+        string? ipAddress,
+        string? correlationId,
+        CancellationToken cancellationToken)
+    {
+        if (request.Roles is null || request.Roles.Length == 0)
+        {
+            throw new ValidationAppException("At least one role must be specified.");
+        }
+
+        var roles = await _roleRepository.GetByNamesAsync(request.Roles, cancellationToken);
+        EnsureAllRolesResolved(request.Roles, roles);
+
+        var user = await _userRepository.GetByIdAsync(id, cancellationToken);
+        if (user is null)
+        {
+            throw new NotFoundAppException("User not found.");
+        }
+
+        user.UserRoles = roles.Select(role => new UserRole { UserId = user.Id, RoleId = role.Id }).ToList();
+        user.ModifiedAtUtc = DateTime.UtcNow;
+        user.ModifiedBy = actorUserId.ToString();
+
+        await _userRepository.UpdateAsync(user, cancellationToken);
+
+        await _authAuditEventRepository.AddAsync(
+            new AuthAuditEvent
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                EventType = AuthAuditEventType.UserRolesChanged,
+                ActorUserId = actorUserId,
+                TimestampUtc = DateTime.UtcNow,
+                IpAddress = ipAddress,
+                CorrelationId = correlationId,
+            },
+            cancellationToken);
+
+        _logger.LogInformation("User {UserId} roles changed by administrator {ActorUserId}.", user.Id, actorUserId);
+
+        return ToSummaryDto(user);
+    }
+
+    private static UserSummaryDto ToSummaryDto(User user)
+    {
+        return new UserSummaryDto(
+            user.Id,
+            user.Username,
+            user.Email,
+            user.DisplayName,
+            user.UserRoles.Select(userRole => userRole.Role!.Name).ToArray(),
+            user.IsActive);
+    }
+
     private static void ValidateRequestShape(CreateUserRequestDto request)
     {
         if (string.IsNullOrWhiteSpace(request.Username)

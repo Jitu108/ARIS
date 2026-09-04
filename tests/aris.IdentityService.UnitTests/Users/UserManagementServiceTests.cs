@@ -12,6 +12,7 @@ public class UserManagementServiceTests
 
     private static readonly Role AdministratorRole = new() { Id = 1, Name = "Administrator" };
     private static readonly Role CoderRole = new() { Id = 3, Name = "Coder" };
+    private static readonly Role RiskAnalystRole = new() { Id = 4, Name = "RiskAnalyst" };
 
     private static UserManagementService CreateSut(
         out FakeUserRepository userRepository,
@@ -167,6 +168,92 @@ public class UserManagementServiceTests
         Assert.Empty(response.Items);
     }
 
+    [Fact] // FR-6.3: an existing user's account/role details are retrievable by id.
+    public async Task GetUserByIdAsync_WithExistingUser_ReturnsSummary()
+    {
+        var sut = CreateSut(out _, out _);
+        var created = await sut.CreateUserAsync(
+            new CreateUserRequestDto("jdoe", "jdoe@aris.local", "P@ssword1", "Jane Doe", new[] { "Coder" }),
+            ActorId, null, null, CancellationToken.None);
+
+        var response = await sut.GetUserByIdAsync(created.Id, CancellationToken.None);
+
+        Assert.Equal("jdoe", response.Username);
+        Assert.Equal("jdoe@aris.local", response.Email);
+        Assert.Equal(new[] { "Coder" }, response.Roles);
+        Assert.True(response.IsActive);
+    }
+
+    [Fact] // FR-6.3: an unknown id is a 404, not a silent empty result.
+    public async Task GetUserByIdAsync_WithUnknownId_ThrowsNotFound()
+    {
+        var sut = CreateSut(out _, out _);
+
+        await Assert.ThrowsAsync<NotFoundAppException>(
+            () => sut.GetUserByIdAsync(Guid.NewGuid(), CancellationToken.None));
+    }
+
+    [Fact] // FR-6.2: an Administrator can replace an existing user's role(s), and the change is audited.
+    public async Task ChangeUserRolesAsync_WithValidRoles_ReplacesRolesAndRecordsAuditEvent()
+    {
+        var sut = CreateSut(out var userRepository, out var authAuditEventRepository, new[] { AdministratorRole, CoderRole, RiskAnalystRole });
+        var created = await sut.CreateUserAsync(
+            new CreateUserRequestDto("jdoe", "jdoe@aris.local", "P@ssword1", "Jane Doe", new[] { "Coder" }),
+            ActorId, null, null, CancellationToken.None);
+
+        var response = await sut.ChangeUserRolesAsync(
+            created.Id,
+            new ChangeUserRolesRequestDto(new[] { "Coder", "RiskAnalyst" }),
+            ActorId,
+            "127.0.0.1",
+            "correlation-2",
+            CancellationToken.None);
+
+        Assert.Equal(new[] { "Coder", "RiskAnalyst" }, response.Roles.OrderBy(role => role));
+
+        var savedUser = Assert.Single(userRepository.Added);
+        Assert.Equal(new[] { CoderRole.Id, RiskAnalystRole.Id }, savedUser.UserRoles.Select(userRole => userRole.RoleId).OrderBy(id => id));
+
+        var auditEvent = Assert.Single(authAuditEventRepository.Added, e => e.EventType == AuthAuditEventType.UserRolesChanged);
+        Assert.Equal(created.Id, auditEvent.UserId);
+        Assert.Equal(ActorId, auditEvent.ActorUserId);
+        Assert.Equal("127.0.0.1", auditEvent.IpAddress);
+        Assert.Equal("correlation-2", auditEvent.CorrelationId);
+    }
+
+    [Fact] // FR-6.2: an unrecognized role name is rejected rather than silently ignored.
+    public async Task ChangeUserRolesAsync_WithUnknownRole_ThrowsValidation()
+    {
+        var sut = CreateSut(out _, out _);
+        var created = await sut.CreateUserAsync(
+            new CreateUserRequestDto("jdoe", "jdoe@aris.local", "P@ssword1", "Jane Doe", new[] { "Coder" }),
+            ActorId, null, null, CancellationToken.None);
+
+        await Assert.ThrowsAsync<ValidationAppException>(
+            () => sut.ChangeUserRolesAsync(created.Id, new ChangeUserRolesRequestDto(new[] { "NotARole" }), ActorId, null, null, CancellationToken.None));
+    }
+
+    [Fact] // FR-6.2: "one or more roles" is a requirement, not an option — an empty role list is rejected.
+    public async Task ChangeUserRolesAsync_WithNoRoles_ThrowsValidation()
+    {
+        var sut = CreateSut(out _, out _);
+        var created = await sut.CreateUserAsync(
+            new CreateUserRequestDto("jdoe", "jdoe@aris.local", "P@ssword1", "Jane Doe", new[] { "Coder" }),
+            ActorId, null, null, CancellationToken.None);
+
+        await Assert.ThrowsAsync<ValidationAppException>(
+            () => sut.ChangeUserRolesAsync(created.Id, new ChangeUserRolesRequestDto(Array.Empty<string>()), ActorId, null, null, CancellationToken.None));
+    }
+
+    [Fact] // FR-6.2: changing roles for a non-existent user is a 404, not a silent no-op.
+    public async Task ChangeUserRolesAsync_WithUnknownUserId_ThrowsNotFound()
+    {
+        var sut = CreateSut(out _, out _);
+
+        await Assert.ThrowsAsync<NotFoundAppException>(
+            () => sut.ChangeUserRolesAsync(Guid.NewGuid(), new ChangeUserRolesRequestDto(new[] { "Coder" }), ActorId, null, null, CancellationToken.None));
+    }
+
     private static async Task SeedUserAsync(
         UserManagementService sut,
         string username,
@@ -217,6 +304,16 @@ public class UserManagementServiceTests
             }
 
             Added.Add(user);
+            return Task.CompletedTask;
+        }
+
+        public Task UpdateAsync(User user, CancellationToken cancellationToken)
+        {
+            foreach (var userRole in user.UserRoles)
+            {
+                userRole.Role ??= _roles.Single(role => role.Id == userRole.RoleId);
+            }
+
             return Task.CompletedTask;
         }
 

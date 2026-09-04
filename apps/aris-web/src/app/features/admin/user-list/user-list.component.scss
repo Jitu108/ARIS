@@ -111,6 +111,12 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  color: inherit;
+  text-decoration: none;
+
+  &:hover .username {
+    text-decoration: underline;
+  }
 
   .username {
     font-weight: 600;

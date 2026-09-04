@@ -1,7 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { CreateUserRequest, CreateUserResponse, ListUsersResponse } from './user-management.models';
+import {
+  ChangeUserRolesRequest,
+  CreateUserRequest,
+  CreateUserResponse,
+  ListUsersResponse,
+  UserSummary,
+} from './user-management.models';
 
 @Injectable({ providedIn: 'root' })
 export class UserManagementService {
@@ -13,5 +19,13 @@ export class UserManagementService {
 
   listUsers(query: string, page: number, pageSize: number): Observable<ListUsersResponse> {
     return this.http.get<ListUsersResponse>('/identity/users', { params: { query, page, pageSize } });
+  }
+
+  getUser(id: string): Observable<UserSummary> {
+    return this.http.get<UserSummary>(`/identity/users/${id}`);
+  }
+
+  changeUserRoles(id: string, request: ChangeUserRolesRequest): Observable<UserSummary> {
+    return this.http.put<UserSummary>(`/identity/users/${id}/roles`, request);
   }
 }
