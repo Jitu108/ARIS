@@ -21,3 +21,19 @@ export interface CreateUserResponse {
   roles: string[];
   isActive: boolean;
 }
+
+export interface UserSummary {
+  id: string;
+  username: string;
+  email: string;
+  displayName: string;
+  roles: string[];
+  isActive: boolean;
+}
+
+export interface ListUsersResponse {
+  items: UserSummary[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+}

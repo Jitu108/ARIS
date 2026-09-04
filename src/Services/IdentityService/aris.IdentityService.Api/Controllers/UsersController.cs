@@ -29,4 +29,16 @@ public sealed class UsersController : ControllerBase
 
         return CreatedAtAction(nameof(CreateUser), new { id = response.Id }, response);
     }
+
+    [HttpGet]
+    public async Task<ActionResult<ListUsersResponseDto>> ListUsers(
+        [FromQuery] string? query,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _userManagementService.ListUsersAsync(query, page, pageSize, cancellationToken);
+
+        return Ok(response);
+    }
 }

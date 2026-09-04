@@ -234,6 +234,12 @@ public class AuthenticationServiceTests
         {
             throw new NotSupportedException("Not used by AuthenticationService tests.");
         }
+
+        public Task<(IReadOnlyCollection<User> Users, int TotalCount)> SearchAsync(
+            string? query, int page, int pageSize, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException("Not used by AuthenticationService tests.");
+        }
     }
 
     private sealed class FakeRefreshTokenRepository : IRefreshTokenRepository
