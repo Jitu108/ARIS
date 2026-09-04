@@ -2,7 +2,7 @@
 
 ARIS is a risk-adjustment intelligence platform for healthcare (HCC mapping, gap-in-care detection, RAF calculation, and eventually RAG/agentic explanation over clinical evidence). It is being built solo, phase-by-phase, as a set of ASP.NET Core microservices behind an Ocelot gateway with an Angular frontend, Docker-first throughout.
 
-**Current state:** documentation-only repository. No source code has been written yet — `Documentations/` is the full spec; implementation has not started. Treat every architectural/API/schema detail below as the *design to build toward*, not existing code.
+**Current state:** implementation has started, mid-Phase-1. `Documentations/` remains the full spec — treat any detail below not yet reflected in code as the *design to build toward*. What exists today: solution scaffolding (`aris.sln`, `src/BuildingBlocks/aris.BuildingBlocks`), a working `IdentityService` (Api/Application/Domain/Infrastructure, with login, refresh/logout, session auto-expiry, and unit + integration test projects under `tests/`), the Angular app (`apps/aris-web`, including the app shell and login screen), and a `docker-compose.yml` wiring `sqlserver` + `identity-service` + `aris-web`. Not yet scaffolded: the Ocelot gateway, `PatientService`, and the `HccMappingService`/`GapEngineService` stubs — see the Project Plan's "Immediate Next Steps" for build order.
 
 ## Documentation map
 
@@ -78,4 +78,4 @@ Full endpoint contracts, RBAC matrix, sequence flows, and data schemas: `Documen
 - Check which phase a capability belongs to before building it — the phase's Technical Documentation has an explicit "Non-Goals" section; respect it.
 - Cross-phase workstreams that must be seeded early even though they're not a phase's main focus: audit-trail logging (from Phase 1), versioning discipline (as each dimension is introduced), PHI-safe logging (from Phase 1), feature flags (from Phase 3's rule engine or Phase 4's retrieval strategy).
 - Follow the vertical-slice build order within a phase (see each phase's Detailed Plan) — don't start slice N+1 before slice N's exit criteria pass in Docker Compose.
-- No solution/project scaffolding exists yet. The first real implementation task is repo/solution structure (.NET solution with Clean Architecture + BuildingBlocks, Angular workspace, Docker Compose skeleton), per the Project Plan's "Immediate Next Steps."
+- Solution/project scaffolding, `BuildingBlocks`, `IdentityService`, and the Angular workspace already exist — don't re-scaffold them. The next unbuilt pieces per the Project Plan's "Immediate Next Steps" are the Ocelot gateway, `PatientService`, and the `HccMappingService`/`GapEngineService` stubs.
