@@ -1,6 +1,6 @@
 # ARIS Claude Code skills
 
-Eight skills live in `.claude/skills/`. Six are ARIS-specific, built to keep a recurring project-specific workflow consistent across services/phases; two (`monday-quick-item`, `monday-ticket-creation`) are general Monday.com board-management skills that happen to be used against this project's own task board.
+Six skills live in `.claude/skills/`, all ARIS-specific, built to keep a recurring project-specific workflow consistent across services/phases.
 
 | Skill | Automates | Doc |
 |---|---|---|
@@ -8,10 +8,8 @@ Eight skills live in `.claude/skills/`. Six are ARIS-specific, built to keep a r
 | `aris-new-service-scaffold` | Scaffolding a new backend service to the fixed Clean Architecture + security/observability/deployment checklist | [aris-new-service-scaffold.md](aris-new-service-scaffold.md) |
 | `aris-phi-safe-log-audit` | Auditing logging/exceptions for PHI-shaped fields leaking out of application code | [aris-phi-safe-log-audit.md](aris-phi-safe-log-audit.md) |
 | `aris-rbac-matrix-sync` | Keeping the endpoint × role RBAC matrix in sync with actual code | [aris-rbac-matrix-sync.md](aris-rbac-matrix-sync.md) |
-| `aris-branch-ticket-plan` | Reconciling the current branch's Monday ticket + the docs into a gap-analysis plan, posted to Slack | [aris-branch-ticket-plan.md](aris-branch-ticket-plan.md) |
+| `aris-branch-ticket-plan` | Reconciling the current branch's GitHub Issue/Project ticket + the docs into a gap-analysis plan, posted to Slack | [aris-branch-ticket-plan.md](aris-branch-ticket-plan.md) |
 | `aris-implementation-log` | Writing/updating living per-service `Documentations/Service Docs/` write-ups of how the code works and connects (with a Mermaid mind map), plus a combined test-description doc | [aris-implementation-log.md](aris-implementation-log.md) |
-| `monday-quick-item` | Creating one Monday.com board item from a title + description | [monday-quick-item.md](monday-quick-item.md) |
-| `monday-ticket-creation` | Bulk-creating Monday.com board items from a requirement document | [monday-ticket-creation.md](monday-ticket-creation.md) |
 
 ## Skills vs. agents vs. hooks
 
@@ -19,7 +17,7 @@ A skill is instructions the *main conversation* follows while doing the work its
 
 - `aris-phase-documentation` and `aris-new-service-scaffold` are **generative** — they produce new documents/code following an established pattern.
 - `aris-phi-safe-log-audit` and `aris-rbac-matrix-sync` are **auditing** — they check existing work against a rule, but (unlike an agent) they're meant to be followed by whoever's already in the conversation doing the work, not delegated out.
-- `aris-branch-ticket-plan` is **reconciling** — it doesn't generate a new artifact or audit code against a fixed rule; it cross-checks three moving sources (a Monday ticket, the doc set, the branch's own diff) against each other and reports the gap.
+- `aris-branch-ticket-plan` is **reconciling** — it doesn't generate a new artifact or audit code against a fixed rule; it cross-checks three moving sources (a GitHub Issue/Project ticket, the doc set, the branch's own diff) against each other and reports the gap.
 - `aris-implementation-log` is **explanatory** — it doesn't check code against a rule or generate a new artifact from a spec; it turns code that already exists into a living, connected explanation of how it works, for `Documentations/Service Docs/`.
 
 ## Why these six, and not more
@@ -42,7 +40,3 @@ Every skill can be reached two ways:
 - **Implicit** — before every turn, Claude Code hands the assistant the name + one-line description of every skill in `.claude/skills/`. The assistant is expected to call a skill on its own, without being asked, whenever the task at hand matches what that skill's description says it's for — no user action triggers this, it's a judgment the assistant makes each turn. This is why each skill's description is written as a trigger condition ("use whenever...", "use before finishing any change that...") rather than just a summary: that phrasing *is* the implicit-invocation rule. See each skill's own doc for its specific trigger wording.
 
 Nothing about a skill's own file marks it as "auto-invoke only" or "explicit only" — every skill in `.claude/skills/` is eligible for both paths simultaneously; which one actually happens on a given turn depends on whether the user asked by name or the assistant recognized the match itself.
-
-## Why the two Monday skills are split the way they are
-
-`monday-quick-item` and `monday-ticket-creation` aren't ARIS-specific in the same sense — they're general Monday.com board-management skills, split by *scale of intent* rather than by domain: one item from a title+description vs. bulk-importing many items from a requirement document. Both default to this project's Monday "Tasks" board, which is the only ARIS-specific detail either one carries.
