@@ -53,10 +53,10 @@
     </div>
     @for (user of users(); track user.id) {
       <div class="table-row">
-        <div class="account-cell">
+        <a class="account-cell" [routerLink]="['/admin/users', user.id]">
           <div class="username">{{ user.username }}</div>
           <div class="email">{{ user.email }}</div>
-        </div>
+        </a>
         <div>{{ user.displayName }}</div>
         <div>{{ user.roles.join(', ') }}</div>
         <div>

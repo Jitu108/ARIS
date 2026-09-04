@@ -14,4 +14,14 @@ public interface IUserManagementService
         int page,
         int pageSize,
         CancellationToken cancellationToken);
+
+    Task<UserSummaryDto> GetUserByIdAsync(Guid id, CancellationToken cancellationToken);
+
+    Task<UserSummaryDto> ChangeUserRolesAsync(
+        Guid id,
+        ChangeUserRolesRequestDto request,
+        Guid actorUserId,
+        string? ipAddress,
+        string? correlationId,
+        CancellationToken cancellationToken);
 }

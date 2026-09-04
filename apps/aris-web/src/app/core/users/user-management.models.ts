@@ -37,3 +37,7 @@ export interface ListUsersResponse {
   pageSize: number;
   totalCount: number;
 }
+
+export interface ChangeUserRolesRequest {
+  roles: string[];
+}

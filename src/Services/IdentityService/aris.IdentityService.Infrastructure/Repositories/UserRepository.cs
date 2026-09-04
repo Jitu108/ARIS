@@ -43,6 +43,11 @@ public sealed class UserRepository : IUserRepository
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task UpdateAsync(User user, CancellationToken cancellationToken)
+    {
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<(IReadOnlyCollection<User> Users, int TotalCount)> SearchAsync(
         string? query, int page, int pageSize, CancellationToken cancellationToken)
     {

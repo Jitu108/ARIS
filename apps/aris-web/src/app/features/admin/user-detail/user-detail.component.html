@@ -1,0 +1,61 @@
+<a class="back-link" routerLink="/admin/users">&larr; Back to users</a>
+
+@if (loading()) {
+  <div class="loading-state">Loading…</div>
+} @else if (!user()) {
+  <div class="banner error-banner">
+    <app-icon name="alert-triangle" [size]="16" />
+    <div>{{ errorMessage() }}</div>
+  </div>
+} @else if (user(); as u) {
+  <div class="page-title">{{ u.displayName }}</div>
+  <div class="page-subtitle">{{ u.username }} &middot; {{ u.email }}</div>
+
+  @if (successMessage()) {
+    <div class="banner success-banner">
+      <app-icon name="checkmark" [size]="16" />
+      <div>{{ successMessage() }}</div>
+    </div>
+  }
+
+  @if (errorMessage()) {
+    <div class="banner error-banner">
+      <app-icon name="alert-triangle" [size]="16" />
+      <div>{{ errorMessage() }}</div>
+    </div>
+  }
+
+  <div class="detail-card">
+    <div class="detail-row">
+      <div class="detail-label">Status</div>
+      <span class="status-pill" [class.inactive]="!u.isActive">{{ u.isActive ? 'Active' : 'Inactive' }}</span>
+    </div>
+
+    <div class="detail-row">
+      <div class="detail-label">Roles</div>
+      @if (!editingRoles()) {
+        <div class="roles-value">
+          <span>{{ u.roles.join(', ') }}</span>
+          <button type="button" class="change-roles-button" (click)="startEditingRoles()">Change roles</button>
+        </div>
+      } @else {
+        <div class="role-editor">
+          <div class="role-list">
+            @for (role of availableRoles; track role) {
+              <label class="role-option">
+                <input type="checkbox" [checked]="selectedRoles.has(role)" (change)="toggleRole(role)" />
+                <span>{{ role }}</span>
+              </label>
+            }
+          </div>
+          <div class="role-editor-actions">
+            <button type="button" class="cancel-button" (click)="cancelEditingRoles()" [disabled]="savingRoles()">Cancel</button>
+            <button type="button" class="save-button" (click)="saveRoles()" [disabled]="savingRoles()">
+              {{ savingRoles() ? 'Saving…' : 'Save roles' }}
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+}
