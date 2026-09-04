@@ -42,4 +42,31 @@ public sealed class UserRepository : IUserRepository
         _dbContext.Users.Add(user);
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task<(IReadOnlyCollection<User> Users, int TotalCount)> SearchAsync(
+        string? query, int page, int pageSize, CancellationToken cancellationToken)
+    {
+        var usersQuery = _dbContext.Users
+            .Include(user => user.UserRoles)
+            .ThenInclude(userRole => userRole.Role)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            usersQuery = usersQuery.Where(user =>
+                EF.Functions.Like(user.Username, $"%{query}%")
+                || EF.Functions.Like(user.Email, $"%{query}%")
+                || EF.Functions.Like(user.DisplayName, $"%{query}%"));
+        }
+
+        var totalCount = await usersQuery.CountAsync(cancellationToken);
+
+        var users = await usersQuery
+            .OrderBy(user => user.Username)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (users, totalCount);
+    }
 }

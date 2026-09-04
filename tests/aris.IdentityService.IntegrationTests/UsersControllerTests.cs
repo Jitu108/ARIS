@@ -91,6 +91,66 @@ public class UsersControllerTests : IClassFixture<TestWebApplicationFactory>
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    [Fact] // IT-ID-13 / FR-6.7: an Administrator can browse a paginated, filtered list of accounts.
+    public async Task ListUsers_AsAdministrator_ReturnsPaginatedResults()
+    {
+        var client = await CreateAuthenticatedAdminClientAsync();
+        await client.PostAsJsonAsync(
+            "/identity/users",
+            new CreateUserRequestDto("listuser1", "listuser1@aris.local", "P@ssword123", "List User One", new[] { "Coder" }));
+
+        var response = await client.GetAsync("/identity/users?page=1&pageSize=20");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ListUsersResponseDto>();
+        Assert.NotNull(body);
+        Assert.Equal(1, body!.Page);
+        Assert.Equal(20, body.PageSize);
+        Assert.Contains(body.Items, item => item.Username == "listuser1" && item.Roles.Contains("Coder"));
+    }
+
+    [Fact] // IT-ID-13 / FR-6.7: a non-matching query is a correct empty result, not an error.
+    public async Task ListUsers_WithNonMatchingQuery_ReturnsEmptyResult()
+    {
+        var client = await CreateAuthenticatedAdminClientAsync();
+
+        var response = await client.GetAsync("/identity/users?query=no-such-account-exists");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ListUsersResponseDto>();
+        Assert.NotNull(body);
+        Assert.Equal(0, body!.TotalCount);
+        Assert.Empty(body.Items);
+    }
+
+    [Fact] // IT-ID-13 / FR-6.6: a non-Administrator cannot browse the user list, enforced server-side regardless of the UI.
+    public async Task ListUsers_AsNonAdministrator_ReturnsForbidden()
+    {
+        var adminClient = await CreateAuthenticatedAdminClientAsync();
+        await adminClient.PostAsJsonAsync(
+            "/identity/users",
+            new CreateUserRequestDto("plainlistcoder", "plainlistcoder@aris.local", "P@ssword123", "Plain List Coder", new[] { "Coder" }));
+
+        var coderClient = _factory.CreateClient();
+        var loginResponse = await coderClient.PostAsJsonAsync("/identity/login", new LoginRequestDto("plainlistcoder", "P@ssword123"));
+        var loginBody = await loginResponse.Content.ReadFromJsonAsync<LoginResponseDto>();
+        coderClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginBody!.AccessToken);
+
+        var response = await coderClient.GetAsync("/identity/users");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact] // IT-ID-13 / FR-6.6: an unauthenticated caller cannot browse the user list.
+    public async Task ListUsers_WithoutBearerToken_ReturnsUnauthorized()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/identity/users");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
     private async Task<HttpClient> CreateAuthenticatedAdminClientAsync()
     {
         var client = _factory.CreateClient();

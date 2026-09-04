@@ -8,4 +8,10 @@ public interface IUserManagementService
         string? ipAddress,
         string? correlationId,
         CancellationToken cancellationToken);
+
+    Task<ListUsersResponseDto> ListUsersAsync(
+        string? query,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken);
 }

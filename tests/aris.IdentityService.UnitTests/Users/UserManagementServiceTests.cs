@@ -18,12 +18,13 @@ public class UserManagementServiceTests
         out FakeAuthAuditEventRepository authAuditEventRepository,
         IReadOnlyCollection<Role>? seededRoles = null)
     {
-        userRepository = new FakeUserRepository();
+        var roles = seededRoles ?? new[] { AdministratorRole, CoderRole };
+        userRepository = new FakeUserRepository(roles);
         authAuditEventRepository = new FakeAuthAuditEventRepository();
 
         return new UserManagementService(
             userRepository,
-            new FakeRoleRepository(seededRoles ?? new[] { AdministratorRole, CoderRole }),
+            new FakeRoleRepository(roles),
             new FakePasswordHasher(),
             authAuditEventRepository,
             new NullPhiSafeLogger());
@@ -111,8 +112,85 @@ public class UserManagementServiceTests
         Assert.Empty(userRepository.Added);
     }
 
+    [Fact] // FR-6.7: browsing the user list returns each account's username/email, display name, roles, and active status.
+    public async Task ListUsersAsync_WithNoQuery_ReturnsAllUsersWithRoles()
+    {
+        var sut = CreateSut(out _, out _);
+        await SeedUserAsync(sut, "adiaz", "adiaz@aris.local", "Ana Diaz", "Coder");
+        await SeedUserAsync(sut, "bsmith", "bsmith@aris.local", "Bob Smith", "Administrator");
+
+        var response = await sut.ListUsersAsync(null, page: 1, pageSize: 20, CancellationToken.None);
+
+        Assert.Equal(2, response.TotalCount);
+        Assert.Equal(2, response.Items.Count);
+        Assert.Contains(response.Items, item => item.Username == "adiaz" && item.Roles.Single() == "Coder" && item.IsActive);
+    }
+
+    [Fact] // FR-6.7: given any number of existing accounts, all are browsable via pagination.
+    public async Task ListUsersAsync_WithPageSizeSmallerThanTotal_ReturnsRequestedPage()
+    {
+        var sut = CreateSut(out _, out _);
+        await SeedUserAsync(sut, "auser", "auser@aris.local", "A User", "Coder");
+        await SeedUserAsync(sut, "buser", "buser@aris.local", "B User", "Coder");
+        await SeedUserAsync(sut, "cuser", "cuser@aris.local", "C User", "Coder");
+
+        var response = await sut.ListUsersAsync(null, page: 2, pageSize: 2, CancellationToken.None);
+
+        Assert.Equal(3, response.TotalCount);
+        Assert.Equal(2, response.Page);
+        Assert.Single(response.Items);
+        Assert.Equal("cuser", response.Items[0].Username);
+    }
+
+    [Fact] // FR-6.7: the list is filterable by username/email/display name.
+    public async Task ListUsersAsync_WithQuery_ReturnsOnlyMatchingUsers()
+    {
+        var sut = CreateSut(out _, out _);
+        await SeedUserAsync(sut, "adiaz", "adiaz@aris.local", "Ana Diaz", "Coder");
+        await SeedUserAsync(sut, "bsmith", "bsmith@aris.local", "Bob Smith", "Coder");
+
+        var response = await sut.ListUsersAsync("diaz", page: 1, pageSize: 20, CancellationToken.None);
+
+        Assert.Equal(1, response.TotalCount);
+        Assert.Equal("adiaz", response.Items[0].Username);
+    }
+
+    [Fact] // FR-6.7: a non-matching query is a correct empty result, not an error.
+    public async Task ListUsersAsync_WithNonMatchingQuery_ReturnsEmptyResult()
+    {
+        var sut = CreateSut(out _, out _);
+        await SeedUserAsync(sut, "adiaz", "adiaz@aris.local", "Ana Diaz", "Coder");
+
+        var response = await sut.ListUsersAsync("nobody-matches-this", page: 1, pageSize: 20, CancellationToken.None);
+
+        Assert.Equal(0, response.TotalCount);
+        Assert.Empty(response.Items);
+    }
+
+    private static async Task SeedUserAsync(
+        UserManagementService sut,
+        string username,
+        string email,
+        string displayName,
+        string role)
+    {
+        await sut.CreateUserAsync(
+            new CreateUserRequestDto(username, email, "P@ssword1", displayName, new[] { role }),
+            ActorId,
+            null,
+            null,
+            CancellationToken.None);
+    }
+
     private sealed class FakeUserRepository : IUserRepository
     {
+        private readonly IReadOnlyCollection<Role> _roles;
+
+        public FakeUserRepository(IReadOnlyCollection<Role> roles)
+        {
+            _roles = roles;
+        }
+
         public List<User> Added { get; } = new();
         public HashSet<string> ExistingUsernamesOrEmails { get; } = new();
 
@@ -133,8 +211,29 @@ public class UserManagementServiceTests
 
         public Task AddAsync(User user, CancellationToken cancellationToken)
         {
+            foreach (var userRole in user.UserRoles)
+            {
+                userRole.Role ??= _roles.Single(role => role.Id == userRole.RoleId);
+            }
+
             Added.Add(user);
             return Task.CompletedTask;
+        }
+
+        public Task<(IReadOnlyCollection<User> Users, int TotalCount)> SearchAsync(
+            string? query, int page, int pageSize, CancellationToken cancellationToken)
+        {
+            var matches = Added
+                .Where(user => string.IsNullOrWhiteSpace(query)
+                    || user.Username.Contains(query, StringComparison.OrdinalIgnoreCase)
+                    || user.Email.Contains(query, StringComparison.OrdinalIgnoreCase)
+                    || user.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(user => user.Username)
+                .ToList();
+
+            var pageItems = matches.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+            return Task.FromResult<(IReadOnlyCollection<User> Users, int TotalCount)>((pageItems, matches.Count));
         }
     }
 

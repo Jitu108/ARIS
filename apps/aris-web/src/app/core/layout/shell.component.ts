@@ -23,7 +23,7 @@ export class ShellComponent {
     const items: NavItem[] = [{ label: 'Dashboard', icon: 'grid', route: '/' }];
 
     if (this.authService.currentUser()?.roles.includes('Administrator')) {
-      items.push({ label: 'Create User', icon: 'users', route: '/admin/users/new' });
+      items.push({ label: 'Users', icon: 'users', route: '/admin/users' });
     }
 
     return items;

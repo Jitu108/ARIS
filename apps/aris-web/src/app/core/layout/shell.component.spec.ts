@@ -69,16 +69,16 @@ describe('ShellComponent', () => {
     expect(navLink.getAttribute('href')).toBe('/');
   });
 
-  it('does not show the "Create User" nav item to a non-Administrator', async () => {
+  it('does not show the "Users" nav item to a non-Administrator', async () => {
     login();
 
     const harness = await RouterTestingHarness.create('/');
     const navLinks = Array.from(harness.routeNativeElement!.querySelectorAll('a.nav-item')) as HTMLAnchorElement[];
 
-    expect(navLinks.some((link) => link.textContent?.includes('Create User'))).toBe(false);
+    expect(navLinks.some((link) => link.textContent?.includes('Users'))).toBe(false);
   });
 
-  it('shows the "Create User" nav item to an Administrator (FR-6.6 UI-side gate)', async () => {
+  it('shows the "Users" nav item to an Administrator (FR-6.6 UI-side gate)', async () => {
     authService.login({ username: 'admin', password: 'Admin@12345' }).subscribe();
     httpMock.expectOne('/identity/login').flush({
       ...loginResponse,
@@ -88,7 +88,7 @@ describe('ShellComponent', () => {
     const harness = await RouterTestingHarness.create('/');
     const navLinks = Array.from(harness.routeNativeElement!.querySelectorAll('a.nav-item')) as HTMLAnchorElement[];
 
-    expect(navLinks.some((link) => link.textContent?.includes('Create User'))).toBe(true);
+    expect(navLinks.some((link) => link.textContent?.trim() === 'Users')).toBe(true);
   });
 
   it('shows the "Log out" control in the account menu and logs out through it', async () => {

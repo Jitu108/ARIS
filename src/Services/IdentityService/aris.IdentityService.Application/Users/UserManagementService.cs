@@ -86,6 +86,30 @@ public sealed class UserManagementService : IUserManagementService
             user.IsActive);
     }
 
+    public async Task<ListUsersResponseDto> ListUsersAsync(
+        string? query,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken)
+    {
+        var normalizedPage = Math.Max(page, 1);
+        var normalizedPageSize = Math.Clamp(pageSize, 1, 100);
+
+        var (users, totalCount) = await _userRepository.SearchAsync(query, normalizedPage, normalizedPageSize, cancellationToken);
+
+        var items = users
+            .Select(user => new UserSummaryDto(
+                user.Id,
+                user.Username,
+                user.Email,
+                user.DisplayName,
+                user.UserRoles.Select(userRole => userRole.Role!.Name).ToArray(),
+                user.IsActive))
+            .ToList();
+
+        return new ListUsersResponseDto(items, normalizedPage, normalizedPageSize, totalCount);
+    }
+
     private static void ValidateRequestShape(CreateUserRequestDto request)
     {
         if (string.IsNullOrWhiteSpace(request.Username)
