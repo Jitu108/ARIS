@@ -1,0 +1,110 @@
+.page-title {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.page-subtitle {
+  font-size: 13px;
+  color: var(--text-2);
+  margin-top: 4px;
+  margin-bottom: 24px;
+}
+
+.form-card {
+  max-width: 480px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.banner {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.error-banner {
+  background: var(--error-tint);
+  border: 1px solid var(--error-border);
+  color: var(--error);
+}
+
+.success-banner {
+  background: var(--accent-tint);
+  border: 1px solid var(--accent-tint-strong);
+  color: var(--accent);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-2);
+  }
+
+  input[type='text'],
+  input[type='email'],
+  input[type='password'] {
+    height: 38px;
+    padding: 0 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--surface);
+
+    &::placeholder {
+      color: var(--text-3);
+    }
+  }
+}
+
+.role-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+
+.role-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 400;
+}
+
+.submit-button {
+  height: 40px;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+
+  &:disabled {
+    background: #5B94A8;
+  }
+}
+
+.spinner {
+  animation: aris-spin 0.7s linear infinite;
+}

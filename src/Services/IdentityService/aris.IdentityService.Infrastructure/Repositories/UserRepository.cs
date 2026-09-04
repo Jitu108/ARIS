@@ -31,4 +31,15 @@ public sealed class UserRepository : IUserRepository
             .ThenInclude(userRole => userRole.Role)
             .SingleOrDefaultAsync(user => user.Id == id, cancellationToken);
     }
+
+    public Task<bool> ExistsByUsernameOrEmailAsync(string username, string email, CancellationToken cancellationToken)
+    {
+        return _dbContext.Users.AnyAsync(user => user.Username == username || user.Email == email, cancellationToken);
+    }
+
+    public async Task AddAsync(User user, CancellationToken cancellationToken)
+    {
+        _dbContext.Users.Add(user);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
 }

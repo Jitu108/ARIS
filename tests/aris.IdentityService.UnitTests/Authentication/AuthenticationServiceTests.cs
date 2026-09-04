@@ -224,6 +224,16 @@ public class AuthenticationServiceTests
 
         public Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
             Task.FromResult(_user is not null && _user.Id == id ? _user : null);
+
+        public Task<bool> ExistsByUsernameOrEmailAsync(string username, string email, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(_user is not null && (_user.Username == username || _user.Email == email));
+        }
+
+        public Task AddAsync(User user, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException("Not used by AuthenticationService tests.");
+        }
     }
 
     private sealed class FakeRefreshTokenRepository : IRefreshTokenRepository
@@ -274,6 +284,11 @@ public class AuthenticationServiceTests
         public FakePasswordHasher(bool matches) => _matches = matches;
 
         public bool Verify(string password, string passwordHash) => _matches;
+
+        public string Hash(string password)
+        {
+            throw new NotSupportedException("Not used by AuthenticationService tests.");
+        }
     }
 
     private sealed class FakeJwtTokenGenerator : IJwtTokenGenerator

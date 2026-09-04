@@ -69,6 +69,28 @@ describe('ShellComponent', () => {
     expect(navLink.getAttribute('href')).toBe('/');
   });
 
+  it('does not show the "Create User" nav item to a non-Administrator', async () => {
+    login();
+
+    const harness = await RouterTestingHarness.create('/');
+    const navLinks = Array.from(harness.routeNativeElement!.querySelectorAll('a.nav-item')) as HTMLAnchorElement[];
+
+    expect(navLinks.some((link) => link.textContent?.includes('Create User'))).toBe(false);
+  });
+
+  it('shows the "Create User" nav item to an Administrator (FR-6.6 UI-side gate)', async () => {
+    authService.login({ username: 'admin', password: 'Admin@12345' }).subscribe();
+    httpMock.expectOne('/identity/login').flush({
+      ...loginResponse,
+      user: { id: 'user-2', displayName: 'System Administrator', roles: ['Administrator'] },
+    });
+
+    const harness = await RouterTestingHarness.create('/');
+    const navLinks = Array.from(harness.routeNativeElement!.querySelectorAll('a.nav-item')) as HTMLAnchorElement[];
+
+    expect(navLinks.some((link) => link.textContent?.includes('Create User'))).toBe(true);
+  });
+
   it('shows the "Log out" control in the account menu and logs out through it', async () => {
     login();
 

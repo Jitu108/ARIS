@@ -2,7 +2,7 @@ import { Component, Input } from '@angular/core';
 
 // Hand-drawn inline SVG, stroke-based, 1.6px stroke weight, 24x24 viewBox, stroke="currentColor" —
 // UI Guidelines §5. Built once here rather than copy-pasted inline per screen (§8).
-export type IconName = 'grid' | 'eye' | 'eye-off' | 'alert-triangle' | 'chevron-down';
+export type IconName = 'grid' | 'eye' | 'eye-off' | 'alert-triangle' | 'chevron-down' | 'users' | 'checkmark';
 
 @Component({
   selector: 'app-icon',
@@ -32,6 +32,15 @@ export type IconName = 'grid' | 'eye' | 'eye-off' | 'alert-triangle' | 'chevron-
         }
         @case ('chevron-down') {
           <path d="M5 8l7 7 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+        }
+        @case ('checkmark') {
+          <path d="M4 12.5l5 5L20 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+        }
+        @case ('users') {
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.6" />
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
         }
       }
     </svg>
