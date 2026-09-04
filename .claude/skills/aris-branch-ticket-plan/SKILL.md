@@ -1,24 +1,24 @@
 ---
 name: aris-branch-ticket-plan
-description: Analyze the current git branch against its Monday.com ticket and the ARIS documentation set, then draft and post a change plan to Slack. Use whenever asked to "analyse/check what's needed on this branch against Monday", "check the ticket for this branch", or otherwise asked to reconcile a branch's ticket + the docs into a plan and post that plan to Slack — as opposed to `monday-quick-item`/`monday-ticket-creation` (those create Monday items, they don't read the board or post to Slack).
+description: Analyze the current git branch against its GitHub Issue/Project ticket and the ARIS documentation set, then draft and post a change plan to Slack. Use whenever asked to "analyse/check what's needed on this branch against its ticket/issue", "check the ticket for this branch", or otherwise asked to reconcile a branch's ticket + the docs into a plan and post that plan to Slack.
 ---
 
 # Branch → ticket → doc reconciliation → Slack plan
 
-Reconciles three things for the branch currently checked out: what the branch's ticket says (Monday), what the docs say is actually in scope (the doc map in `CLAUDE.md`), and what the branch's own commits/diff currently do — then turns the gaps into a plan and posts it to Slack.
+Reconciles three things for the branch currently checked out: what the branch's GitHub Issue/Project ticket says, what the docs say is actually in scope (the doc map in `CLAUDE.md`), and what the branch's own commits/diff currently do — then turns the gaps into a plan and posts it to Slack.
 
-## 1. Identify the ticket from the branch
+## 1. Identify the issue number from the branch
 
-- `git branch --show-current` for the branch name (e.g. `TARIS-013`, `dev/TARIS-046`).
-- Strip known prefixes (`dev/`, `feature/`, `bugfix/`, …) and extract the ticket token with a `[A-Z]+-\d+` match (this repo's convention — see `TARIS-011`, `TARIS-012`, `TJKG-020` in `git log`/`git branch -a`).
-- If the branch name has no ticket-shaped token, ask the user for the ticket ID rather than guessing which item it might be.
+- `git branch --show-current` for the branch name (e.g. `53-remove-monday-skills`, `dev/42-add-x`).
+- Strip known prefixes (`dev/`, `feature/`, `bugfix/`, …) and extract the leading issue number with a `^\d+` match against what remains — this repo's convention is a bare GitHub issue number leading the branch name (e.g. `53` in `53-remove-monday-skills`).
+- If the branch name has no leading number, ask the user for the issue number/URL rather than guessing which item it might be.
 
-## 2. Find and read the matching Monday item
+## 2. Find and read the matching GitHub Issue + Project item
 
-- Default board is the ARIS "Tasks" board (id `5030912763`, same default `monday-quick-item`/`monday-ticket-creation` use) unless the user names a different one.
-- Search for the ticket token (`mcp__claude_ai_monday_com__search`, or `get_board_items_page` filtered on item name) — don't assume the item name is the bare ticket ID verbatim, items are often named `<TicketID>: <summary>`.
-- If nothing matches, say so and ask for the item URL/ID rather than picking the closest-looking item.
-- Once found, read: status, priority/type columns, the native description field, and recent updates/comments (`get_updates`) — this is "what the ticket actually asks for," which is often more current than the branch name alone.
+- Repo: inferred from `git remote get-url origin` (currently `Jitu108/ARIS`). Default board is [Jitu108's Project #2](https://github.com/users/Jitu108/projects/2/views/2) unless the user names a different one.
+- Read the issue itself: `gh issue view <n> --repo Jitu108/ARIS --json number,title,state,labels,body,comments` — title, open/closed state, labels, the native description (body), and comments — this is "what the ticket actually asks for," which is often more current than the branch name alone.
+- Read its position on the Project board (separate from the issue's open/closed state — a Project can carry its own Status field like Todo/In Progress/Done): `gh project item-list 2 --owner Jitu108 --format json`, then find the item whose linked content matches issue `<n>` and read its `status` field.
+- If no issue matches the number, say so and ask for the issue URL/number rather than picking the closest-looking one.
 
 ## 3. Read what the branch actually contains
 
@@ -41,7 +41,7 @@ Compare ticket intent (step 2) + doc spec (step 4) against actual branch content
 - Any of this project's cross-cutting non-negotiables that look unaddressed for this change (PHI-safe logging, independent JWT/RBAC validation per service, versioning, audit events) — per `CLAUDE.md`'s "Non-negotiable principles."
 - Where an existing skill/agent is the right next step rather than free-form advice — e.g. `aris-rbac-matrix-sync` if an endpoint changed, `aris-phi-safe-log-audit` if logging touches an identifying entity, the `auth-session-security-reviewer` agent if this touches JWT/refresh-token/session mechanics, the `fr-techdoc-testdoc-traceability-auditor` agent if an FR changed. Name them as recommended next steps, don't just re-derive their checks inline.
 
-Structure the plan as: ticket summary (ID, title, status) → current branch state (commits/diff summary) → gap analysis → proposed changes (ordered, each tied to the FR-x.x or doc section it satisfies) → open questions, if any.
+Structure the plan as: ticket summary (issue #, title, status) → current branch state (commits/diff summary) → gap analysis → proposed changes (ordered, each tied to the FR-x.x or doc section it satisfies) → open questions, if any.
 
 ## 6. Post the plan to Slack
 
@@ -52,5 +52,5 @@ Structure the plan as: ticket summary (ID, title, status) → current branch sta
 
 ## Notes
 
-- If the branch's ticket is already `Done`/closed on Monday, say so plainly rather than manufacturing a gap analysis for it — report that the ticket and branch appear reconciled.
-- If Monday and the docs disagree (ticket asks for something the current phase's docs mark as a non-goal), surface that conflict explicitly rather than silently picking one side.
+- If the branch's issue is already closed, or its Project status is `Done`, say so plainly rather than manufacturing a gap analysis for it — report that the ticket and branch appear reconciled.
+- If the issue/Project status and the docs disagree (ticket asks for something the current phase's docs mark as a non-goal), surface that conflict explicitly rather than silently picking one side.

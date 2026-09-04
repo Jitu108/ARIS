@@ -4,11 +4,11 @@
 
 ## What it does
 
-Reconciles three sources for the branch currently checked out: what its Monday.com ticket asks for, what the ARIS documentation set (per `CLAUDE.md`'s doc map) says is actually in scope, and what the branch's own commits/diff currently contain — then turns any gap into a structured plan and posts that plan to Slack.
+Reconciles three sources for the branch currently checked out: what its GitHub Issue/Project ticket asks for, what the ARIS documentation set (per `CLAUDE.md`'s doc map) says is actually in scope, and what the branch's own commits/diff currently contain — then turns any gap into a structured plan and posts that plan to Slack.
 
 ## How it does it
 
-**§1–2 identify the ticket and read it from Monday**: extract the ticket token (`[A-Z]+-\d+`) from the branch name, stripping prefixes like `dev/`; search the ARIS "Tasks" board (id `5030912763`, the same default `monday-quick-item`/`monday-ticket-creation` use) rather than assuming the item name is the bare ticket ID; read its status, columns, native description, and recent updates — treating this as the current source of truth, since a ticket's description can move ahead of a branch name coined at checkout time.
+**§1–2 identify the issue and read it from GitHub**: extract the leading issue number from the branch name, stripping prefixes like `dev/` (e.g. `53` from `53-remove-monday-skills`); read the issue via `gh issue view <n> --repo Jitu108/ARIS` (title, state, labels, body, comments) and its Status field on [Project #2](https://github.com/users/Jitu108/projects/2/views/2) via `gh project item-list 2 --owner Jitu108` — treating this as the current source of truth, since an issue's body/comments can move ahead of a branch name coined at checkout time.
 
 **§3 reads the branch itself**: `git log`/`git diff` against `main` for committed work, plus `git status` for anything still uncommitted — re-read fresh rather than trusting anything already in conversation context.
 
@@ -20,19 +20,19 @@ Reconciles three sources for the branch currently checked out: what its Monday.c
 
 ## Why it exists
 
-The project runs ticket-per-branch (`TARIS-011`, `TARIS-012`, `TARIS-013`, ...), a Monday "Tasks" board, a six-document-per-phase spec, and a Slack webhook already wired for turn notifications — but nothing previously tied those four together into "is this branch actually finishing what its ticket and the docs say it should, and what's left." Re-deriving that reconciliation by hand each time a branch is picked up risks missing a doc-tagged non-goal, missing a ticket update that moved the goalposts after the branch was cut, or silently skipping the Slack visibility step the workflow depends on.
+The project runs ticket-per-branch (issue numbers leading the branch name, e.g. `53-remove-monday-skills`), a GitHub Project board, a six-document-per-phase spec, and a Slack webhook already wired for turn notifications — but nothing previously tied those four together into "is this branch actually finishing what its ticket and the docs say it should, and what's left." Re-deriving that reconciliation by hand each time a branch is picked up risks missing a doc-tagged non-goal, missing an issue update that moved the goalposts after the branch was cut, or silently skipping the Slack visibility step the workflow depends on.
 
 ## When it fires
 
-Whenever asked to analyze what's left on the current branch against its ticket and the docs, check a branch's ticket against the Monday board, or otherwise reconcile branch + ticket + docs into a plan that gets posted to Slack.
+Whenever asked to analyze what's left on the current branch against its ticket and the docs, check a branch's issue against the GitHub Project board, or otherwise reconcile branch + ticket + docs into a plan that gets posted to Slack.
 
 ## How to invoke
 
-- **Explicitly**: `/aris-branch-ticket-plan`, or ask directly — "check this branch's ticket against Monday and the docs, plan what's left, post it to Slack."
-- **Implicitly**: the assistant should recognize a multi-clause request that names checking the current branch's ticket on Monday, checking documentation, and posting a plan to Slack, even when phrased informally and without the skill's name.
+- **Explicitly**: `/aris-branch-ticket-plan`, or ask directly — "check this branch's issue against the project board and the docs, plan what's left, post it to Slack."
+- **Implicitly**: the assistant should recognize a multi-clause request that names checking the current branch's ticket/issue, checking documentation, and posting a plan to Slack, even when phrased informally and without the skill's name.
 
 ## Other details
 
-- **Distinct from the two Monday skills**: `monday-quick-item`/`monday-ticket-creation` *write* to the board (create items); this skill only *reads* the board (find and inspect the one item matching the current branch) — it never creates or modifies a Monday item as part of its own flow.
 - **Distinct from the Stop hook's Slack mirroring** (`.claude/hooks/slack-notify.sh`): that hook independently posts whatever text closes out *any* turn, regardless of this skill. This skill's own Slack post is the structured plan itself, sent explicitly in step 6 — not a byproduct of the hook, and not a substitute for it either.
 - **Depends on the phase doc set staying current** — if `aris-phase-documentation` hasn't been run for a scope change, this skill's doc cross-reference will be checking against a stale spec; it surfaces contradictions between the ticket and the docs rather than silently trusting either.
+- **Requires the `gh` CLI** to be authenticated against the `Jitu108/ARIS` repo for both the issue lookup and the Project item lookup.
