@@ -1,0 +1,12 @@
+<div class="overlay-backdrop" (click)="cancel.emit()">
+  <div class="overlay-card" (click)="$event.stopPropagation()">
+    <div class="overlay-title">{{ title }}</div>
+    <div class="overlay-message">{{ message }}</div>
+    <div class="overlay-actions">
+      <button type="button" class="cancel-button" (click)="cancel.emit()" [disabled]="confirming">Cancel</button>
+      <button type="button" class="confirm-button" (click)="confirm.emit()" [disabled]="confirming">
+        {{ confirming ? 'Please wait…' : confirmLabel }}
+      </button>
+    </div>
+  </div>
+</div>

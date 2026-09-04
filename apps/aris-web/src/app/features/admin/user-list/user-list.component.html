@@ -31,9 +31,11 @@
       <div>Display name</div>
       <div>Roles</div>
       <div>Status</div>
+      <div></div>
     </div>
     @for (row of [1, 2, 3, 4, 5]; track row) {
       <div class="table-row skeleton-row">
+        <div class="skeleton-cell"></div>
         <div class="skeleton-cell"></div>
         <div class="skeleton-cell"></div>
         <div class="skeleton-cell"></div>
@@ -44,12 +46,20 @@
 } @else if (users().length === 0) {
   <div class="empty-state">No results</div>
 } @else {
+  @if (deactivateError()) {
+    <div class="banner error-banner">
+      <app-icon name="alert-triangle" [size]="16" />
+      <div>{{ deactivateError() }}</div>
+    </div>
+  }
+
   <div class="user-table">
     <div class="table-header">
       <div>Account</div>
       <div>Display name</div>
       <div>Roles</div>
       <div>Status</div>
+      <div></div>
     </div>
     @for (user of users(); track user.id) {
       <div class="table-row">
@@ -63,6 +73,11 @@
           <span class="status-pill" [class.inactive]="!user.isActive">
             {{ user.isActive ? 'Active' : 'Inactive' }}
           </span>
+        </div>
+        <div class="row-actions">
+          @if (user.isActive) {
+            <button type="button" class="deactivate-button" (click)="requestDeactivate(user)">Deactivate</button>
+          }
         </div>
       </div>
     }
@@ -78,4 +93,15 @@
       <button type="button" [disabled]="page() >= totalPages()" (click)="goToNextPage()">Next</button>
     </div>
   </div>
+}
+
+@if (userPendingDeactivation(); as user) {
+  <app-confirm-dialog
+    title="Deactivate {{ user.displayName }}?"
+    [message]="'They will be signed out immediately and won\'t be able to log in until reactivated.'"
+    confirmLabel="Deactivate"
+    [confirming]="deactivating()"
+    (confirm)="confirmDeactivate()"
+    (cancel)="cancelDeactivate()"
+  />
 }

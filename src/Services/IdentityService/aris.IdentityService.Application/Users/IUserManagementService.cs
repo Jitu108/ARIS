@@ -24,4 +24,11 @@ public interface IUserManagementService
         string? ipAddress,
         string? correlationId,
         CancellationToken cancellationToken);
+
+    Task DeactivateUserAsync(
+        Guid id,
+        Guid actorUserId,
+        string? ipAddress,
+        string? correlationId,
+        CancellationToken cancellationToken);
 }

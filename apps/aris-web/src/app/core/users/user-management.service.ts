@@ -28,4 +28,8 @@ export class UserManagementService {
   changeUserRoles(id: string, request: ChangeUserRolesRequest): Observable<UserSummary> {
     return this.http.put<UserSummary>(`/identity/users/${id}/roles`, request);
   }
+
+  deactivateUser(id: string): Observable<void> {
+    return this.http.post<void>(`/identity/users/${id}/deactivate`, null);
+  }
 }

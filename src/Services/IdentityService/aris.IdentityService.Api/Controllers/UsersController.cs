@@ -65,4 +65,16 @@ public sealed class UsersController : ControllerBase
 
         return Ok(response);
     }
+
+    [HttpPost("{id:guid}/deactivate")]
+    public async Task<IActionResult> DeactivateUser(Guid id, CancellationToken cancellationToken)
+    {
+        var actorUserId = Guid.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)!.Value);
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var correlationId = HttpContext.GetCorrelationId();
+
+        await _userManagementService.DeactivateUserAsync(id, actorUserId, ipAddress, correlationId, cancellationToken);
+
+        return NoContent();
+    }
 }

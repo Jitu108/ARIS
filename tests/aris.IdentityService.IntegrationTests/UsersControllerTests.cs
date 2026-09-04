@@ -270,6 +270,78 @@ public class UsersControllerTests : IClassFixture<TestWebApplicationFactory>
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    [Fact] // IT-ID-14 / FR-6.8: deactivate sets the account inactive, revokes its outstanding refresh token(s), and a subsequent login returns the same generic 401 as any invalid login.
+    public async Task DeactivateUser_AsAdministrator_RevokesSessionsAndBlocksFutureLogin()
+    {
+        var client = await CreateAuthenticatedAdminClientAsync();
+        var createResponse = await client.PostAsJsonAsync(
+            "/identity/users",
+            new CreateUserRequestDto("deactivateuser1", "deactivateuser1@aris.local", "P@ssword123", "Deactivate User One", new[] { "Coder" }));
+        var created = await createResponse.Content.ReadFromJsonAsync<CreateUserResponseDto>();
+
+        var loginResponse = await _factory.CreateClient().PostAsJsonAsync(
+            "/identity/login",
+            new LoginRequestDto("deactivateuser1", "P@ssword123"));
+        var loginBody = await loginResponse.Content.ReadFromJsonAsync<LoginResponseDto>();
+
+        var deactivateResponse = await client.PostAsync($"/identity/users/{created!.Id}/deactivate", null);
+        Assert.Equal(HttpStatusCode.NoContent, deactivateResponse.StatusCode);
+
+        var refreshResponse = await _factory.CreateClient().PostAsJsonAsync(
+            "/identity/refresh",
+            new RefreshRequestDto(loginBody!.RefreshToken));
+        Assert.Equal(HttpStatusCode.Unauthorized, refreshResponse.StatusCode);
+
+        var secondLoginResponse = await _factory.CreateClient().PostAsJsonAsync(
+            "/identity/login",
+            new LoginRequestDto("deactivateuser1", "P@ssword123"));
+        Assert.Equal(HttpStatusCode.Unauthorized, secondLoginResponse.StatusCode);
+    }
+
+    [Fact] // IT-ID-15 / FR-6.8: deactivating an already-inactive account is a conflict.
+    public async Task DeactivateUser_OnAlreadyInactiveAccount_ReturnsConflict()
+    {
+        var client = await CreateAuthenticatedAdminClientAsync();
+        var createResponse = await client.PostAsJsonAsync(
+            "/identity/users",
+            new CreateUserRequestDto("deactivateuser2", "deactivateuser2@aris.local", "P@ssword123", "Deactivate User Two", new[] { "Coder" }));
+        var created = await createResponse.Content.ReadFromJsonAsync<CreateUserResponseDto>();
+        await client.PostAsync($"/identity/users/{created!.Id}/deactivate", null);
+
+        var response = await client.PostAsync($"/identity/users/{created.Id}/deactivate", null);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact] // IT-ID-15 / FR-6.6: a non-Administrator cannot deactivate a user, enforced server-side regardless of the UI.
+    public async Task DeactivateUser_AsNonAdministrator_ReturnsForbidden()
+    {
+        var adminClient = await CreateAuthenticatedAdminClientAsync();
+        var createResponse = await adminClient.PostAsJsonAsync(
+            "/identity/users",
+            new CreateUserRequestDto("plaindeactivatecoder", "plaindeactivatecoder@aris.local", "P@ssword123", "Plain Deactivate Coder", new[] { "Coder" }));
+        var created = await createResponse.Content.ReadFromJsonAsync<CreateUserResponseDto>();
+
+        var coderClient = _factory.CreateClient();
+        var loginResponse = await coderClient.PostAsJsonAsync("/identity/login", new LoginRequestDto("plaindeactivatecoder", "P@ssword123"));
+        var loginBody = await loginResponse.Content.ReadFromJsonAsync<LoginResponseDto>();
+        coderClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginBody!.AccessToken);
+
+        var response = await coderClient.PostAsync($"/identity/users/{created!.Id}/deactivate", null);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact] // IT-ID-15 / FR-6.8: deactivating an unknown user id is a 404.
+    public async Task DeactivateUser_WithUnknownUserId_ReturnsNotFound()
+    {
+        var client = await CreateAuthenticatedAdminClientAsync();
+
+        var response = await client.PostAsync($"/identity/users/{Guid.NewGuid()}/deactivate", null);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
     private async Task<HttpClient> CreateAuthenticatedAdminClientAsync()
     {
         var client = _factory.CreateClient();
