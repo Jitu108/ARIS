@@ -76,7 +76,7 @@
 .table-header,
 .table-row {
   display: grid;
-  grid-template-columns: 2fr 1.5fr 1.5fr 1fr;
+  grid-template-columns: 2fr 1.5fr 1.5fr 1fr 1fr;
   gap: 12px;
   padding: 0 16px;
   align-items: center;
@@ -143,6 +143,23 @@
     background: var(--border);
     color: var(--text-3);
   }
+}
+
+.row-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.deactivate-button {
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .skeleton-row {

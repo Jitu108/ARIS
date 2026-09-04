@@ -19,15 +19,26 @@ public class UserManagementServiceTests
         out FakeAuthAuditEventRepository authAuditEventRepository,
         IReadOnlyCollection<Role>? seededRoles = null)
     {
+        return CreateSut(out userRepository, out authAuditEventRepository, out _, seededRoles);
+    }
+
+    private static UserManagementService CreateSut(
+        out FakeUserRepository userRepository,
+        out FakeAuthAuditEventRepository authAuditEventRepository,
+        out FakeRefreshTokenRepository refreshTokenRepository,
+        IReadOnlyCollection<Role>? seededRoles = null)
+    {
         var roles = seededRoles ?? new[] { AdministratorRole, CoderRole };
         userRepository = new FakeUserRepository(roles);
         authAuditEventRepository = new FakeAuthAuditEventRepository();
+        refreshTokenRepository = new FakeRefreshTokenRepository();
 
         return new UserManagementService(
             userRepository,
             new FakeRoleRepository(roles),
             new FakePasswordHasher(),
             authAuditEventRepository,
+            refreshTokenRepository,
             new NullPhiSafeLogger());
     }
 
@@ -254,6 +265,51 @@ public class UserManagementServiceTests
             () => sut.ChangeUserRolesAsync(Guid.NewGuid(), new ChangeUserRolesRequestDto(new[] { "Coder" }), ActorId, null, null, CancellationToken.None));
     }
 
+    [Fact] // FR-6.8: deactivating an active user flips the flag, revokes sessions, and records an audit event.
+    public async Task DeactivateUserAsync_WithActiveUser_DeactivatesRevokesSessionsAndRecordsAuditEvent()
+    {
+        var sut = CreateSut(out var userRepository, out var authAuditEventRepository, out var refreshTokenRepository);
+        var created = await sut.CreateUserAsync(
+            new CreateUserRequestDto("jdoe", "jdoe@aris.local", "P@ssword1", "Jane Doe", new[] { "Coder" }),
+            ActorId, null, null, CancellationToken.None);
+
+        await sut.DeactivateUserAsync(created.Id, ActorId, "127.0.0.1", "correlation-3", CancellationToken.None);
+
+        var savedUser = Assert.Single(userRepository.Added);
+        Assert.False(savedUser.IsActive);
+        Assert.Equal(created.Id, Assert.Single(refreshTokenRepository.RevokedForUserIds));
+
+        var auditEvent = Assert.Single(authAuditEventRepository.Added, e => e.EventType == AuthAuditEventType.UserDeactivated);
+        Assert.Equal(created.Id, auditEvent.UserId);
+        Assert.Equal(ActorId, auditEvent.ActorUserId);
+        Assert.Equal("127.0.0.1", auditEvent.IpAddress);
+        Assert.Equal("correlation-3", auditEvent.CorrelationId);
+    }
+
+    [Fact] // FR-6.8: deactivating an already-inactive account is a conflict, not a silent no-op.
+    public async Task DeactivateUserAsync_WithAlreadyInactiveUser_ThrowsConflict()
+    {
+        var sut = CreateSut(out _, out _, out var refreshTokenRepository);
+        var created = await sut.CreateUserAsync(
+            new CreateUserRequestDto("jdoe", "jdoe@aris.local", "P@ssword1", "Jane Doe", new[] { "Coder" }),
+            ActorId, null, null, CancellationToken.None);
+        await sut.DeactivateUserAsync(created.Id, ActorId, null, null, CancellationToken.None);
+
+        await Assert.ThrowsAsync<ConflictAppException>(
+            () => sut.DeactivateUserAsync(created.Id, ActorId, null, null, CancellationToken.None));
+
+        Assert.Single(refreshTokenRepository.RevokedForUserIds);
+    }
+
+    [Fact] // FR-6.8: deactivating a non-existent user is a 404, not a silent no-op.
+    public async Task DeactivateUserAsync_WithUnknownUserId_ThrowsNotFound()
+    {
+        var sut = CreateSut(out _, out _);
+
+        await Assert.ThrowsAsync<NotFoundAppException>(
+            () => sut.DeactivateUserAsync(Guid.NewGuid(), ActorId, null, null, CancellationToken.None));
+    }
+
     private static async Task SeedUserAsync(
         UserManagementService sut,
         string username,
@@ -358,6 +414,37 @@ public class UserManagementServiceTests
         public Task AddAsync(AuthAuditEvent authAuditEvent, CancellationToken cancellationToken)
         {
             Added.Add(authAuditEvent);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeRefreshTokenRepository : IRefreshTokenRepository
+    {
+        public List<Guid> RevokedForUserIds { get; } = new();
+
+        public Task AddAsync(RefreshToken refreshToken, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException("Not used by UserManagementService tests.");
+        }
+
+        public Task<RefreshToken?> GetByTokenHashAsync(string tokenHash, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException("Not used by UserManagementService tests.");
+        }
+
+        public Task RevokeAsync(RefreshToken refreshToken, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException("Not used by UserManagementService tests.");
+        }
+
+        public Task<bool> RotateAsync(RefreshToken currentToken, RefreshToken newToken, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException("Not used by UserManagementService tests.");
+        }
+
+        public Task RevokeAllActiveForUserAsync(Guid userId, CancellationToken cancellationToken)
+        {
+            RevokedForUserIds.Add(userId);
             return Task.CompletedTask;
         }
     }

@@ -1,0 +1,66 @@
+.overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 24, 32, 0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.overlay-card {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 16px;
+  background: var(--surface);
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(16, 24, 32, 0.14);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.overlay-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.overlay-message {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--text-2);
+}
+
+.overlay-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.cancel-button {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.confirm-button {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+
+  &:disabled {
+    background: #5B94A8;
+  }
+}

@@ -107,4 +107,80 @@ describe('UserListComponent', () => {
       vi.useRealTimers();
     }
   });
+
+  const activeUser = { id: 'u1', username: 'jdoe', email: 'jdoe@aris.local', displayName: 'Jane Doe', roles: ['Coder'], isActive: true };
+
+  it('shows a Deactivate button only for active accounts (FR-6.8)', () => {
+    const fixture = createComponent();
+    const response: ListUsersResponse = {
+      items: [
+        activeUser,
+        { id: 'u2', username: 'bsmith', email: 'bsmith@aris.local', displayName: 'Bob Smith', roles: ['Coder'], isActive: false },
+      ],
+      page: 1,
+      pageSize: 20,
+      totalCount: 2,
+    };
+    httpMock.expectOne((req) => req.url === '/identity/users').flush(response);
+    fixture.detectChanges();
+
+    const buttons = fixture.nativeElement.querySelectorAll('.deactivate-button');
+    expect(buttons.length).toBe(1);
+  });
+
+  it('opens a confirm dialog and deactivates the user on confirm, updating the row in place', () => {
+    const fixture = createComponent();
+    httpMock
+      .expectOne((req) => req.url === '/identity/users')
+      .flush({ items: [activeUser], page: 1, pageSize: 20, totalCount: 1 });
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('.deactivate-button').click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.userPendingDeactivation()).toEqual(activeUser);
+
+    fixture.componentInstance.confirmDeactivate();
+    httpMock.expectOne((req) => req.method === 'POST' && req.url === '/identity/users/u1/deactivate').flush(null);
+
+    expect(fixture.componentInstance.userPendingDeactivation()).toBeNull();
+    expect(fixture.componentInstance.users()[0].isActive).toBe(false);
+  });
+
+  it('shows the backend-specific reason when deactivation fails', () => {
+    const fixture = createComponent();
+    httpMock
+      .expectOne((req) => req.url === '/identity/users')
+      .flush({ items: [activeUser], page: 1, pageSize: 20, totalCount: 1 });
+    fixture.detectChanges();
+
+    fixture.componentInstance.requestDeactivate(activeUser);
+    fixture.componentInstance.confirmDeactivate();
+
+    const problem = {
+      type: 'https://aris.dev/problems/conflict',
+      title: 'Conflict.',
+      status: 409,
+      detail: 'User is already inactive.',
+    };
+    httpMock
+      .expectOne((req) => req.method === 'POST' && req.url === '/identity/users/u1/deactivate')
+      .flush(problem, { status: 409, statusText: 'Conflict' });
+
+    expect(fixture.componentInstance.deactivateError()).toBe('User is already inactive.');
+  });
+
+  it('closes the confirm dialog without calling the backend on cancel', () => {
+    const fixture = createComponent();
+    httpMock
+      .expectOne((req) => req.url === '/identity/users')
+      .flush({ items: [activeUser], page: 1, pageSize: 20, totalCount: 1 });
+    fixture.detectChanges();
+
+    fixture.componentInstance.requestDeactivate(activeUser);
+    fixture.componentInstance.cancelDeactivate();
+
+    expect(fixture.componentInstance.userPendingDeactivation()).toBeNull();
+    httpMock.expectNone((req) => req.method === 'POST');
+  });
 });

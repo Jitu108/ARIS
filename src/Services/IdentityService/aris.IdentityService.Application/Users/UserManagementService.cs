@@ -11,6 +11,7 @@ public sealed class UserManagementService : IUserManagementService
     private readonly IRoleRepository _roleRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IAuthAuditEventRepository _authAuditEventRepository;
+    private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly IPhiSafeLogger<UserManagementService> _logger;
 
     public UserManagementService(
@@ -18,12 +19,14 @@ public sealed class UserManagementService : IUserManagementService
         IRoleRepository roleRepository,
         IPasswordHasher passwordHasher,
         IAuthAuditEventRepository authAuditEventRepository,
+        IRefreshTokenRepository refreshTokenRepository,
         IPhiSafeLogger<UserManagementService> logger)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
         _passwordHasher = passwordHasher;
         _authAuditEventRepository = authAuditEventRepository;
+        _refreshTokenRepository = refreshTokenRepository;
         _logger = logger;
     }
 
@@ -165,6 +168,47 @@ public sealed class UserManagementService : IUserManagementService
         _logger.LogInformation("User {UserId} roles changed by administrator {ActorUserId}.", user.Id, actorUserId);
 
         return ToSummaryDto(user);
+    }
+
+    public async Task DeactivateUserAsync(
+        Guid id,
+        Guid actorUserId,
+        string? ipAddress,
+        string? correlationId,
+        CancellationToken cancellationToken)
+    {
+        var user = await _userRepository.GetByIdAsync(id, cancellationToken);
+        if (user is null)
+        {
+            throw new NotFoundAppException("User not found.");
+        }
+
+        if (!user.IsActive)
+        {
+            throw new ConflictAppException("User is already inactive.");
+        }
+
+        user.IsActive = false;
+        user.ModifiedAtUtc = DateTime.UtcNow;
+        user.ModifiedBy = actorUserId.ToString();
+
+        await _userRepository.UpdateAsync(user, cancellationToken);
+        await _refreshTokenRepository.RevokeAllActiveForUserAsync(user.Id, cancellationToken);
+
+        await _authAuditEventRepository.AddAsync(
+            new AuthAuditEvent
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                EventType = AuthAuditEventType.UserDeactivated,
+                ActorUserId = actorUserId,
+                TimestampUtc = DateTime.UtcNow,
+                IpAddress = ipAddress,
+                CorrelationId = correlationId,
+            },
+            cancellationToken);
+
+        _logger.LogInformation("User {UserId} deactivated by administrator {ActorUserId}.", user.Id, actorUserId);
     }
 
     private static UserSummaryDto ToSummaryDto(User user)
