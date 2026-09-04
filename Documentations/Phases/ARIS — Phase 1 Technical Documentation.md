@@ -430,6 +430,7 @@ No stack traces, connection strings, or internal identifiers are ever included (
 | Endpoint | Administrator | Clinician | Coder | RiskAnalyst | Auditor | Researcher |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
 | `POST /identity/login` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `POST /identity/refresh` | anonymous (token-bearing) | anonymous (token-bearing) | anonymous (token-bearing) | anonymous (token-bearing) | anonymous (token-bearing) | anonymous (token-bearing) |
 | `GET /identity/me` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `POST /identity/logout` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `POST /identity/users` | ✓ | – | – | – | – | – |
@@ -446,7 +447,7 @@ No stack traces, connection strings, or internal identifiers are ever included (
 | `GET /patients` (search) | ✓ | ✓ | ✓ | ✓ | – | – |
 | `GET /patients/{id}` | ✓ | ✓ | ✓ | ✓ | – | – |
 
-Auditor and Researcher can authenticate in Phase 1 but have no functional area yet beyond their own profile and (per §3.6 of the Functional Requirements) resetting their own password — this is intentional (matches the Functional Requirements doc's actor table). The password-reset endpoints are pre-authentication by nature (an anonymous, not-yet-logged-in user must be able to reach them) and are protected instead by the token-possession and single-use/expiry mechanics in §5.1/§3.1, not by a role check.
+Auditor and Researcher can authenticate in Phase 1 but have no functional area yet beyond their own profile and (per §3.6 of the Functional Requirements) resetting their own password — this is intentional (matches the Functional Requirements doc's actor table). The password-reset endpoints, and `POST /identity/refresh`, are pre-authentication by nature (an anonymous, not-yet-logged-in caller must be able to reach them, presenting a refresh/reset token rather than an access token) and are protected instead by the token-possession and single-use/expiry/rotation mechanics in §5.1/§3.1, not by a role check.
 
 ### 5.4 Logging and PHI handling
 

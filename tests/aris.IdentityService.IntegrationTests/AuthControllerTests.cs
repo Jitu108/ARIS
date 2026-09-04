@@ -212,4 +212,32 @@ public class AuthControllerTests : IClassFixture<TestWebApplicationFactory>
 
         Assert.Equal(HttpStatusCode.NoContent, logoutResponse.StatusCode);
     }
+
+    [Fact] // IT-ID-06 / FR-2.1: GET /identity/me with no token returns 401, not data.
+    public async Task Me_WithoutBearerToken_ReturnsUnauthorized()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/identity/me");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact] // FR-2.1: GET /identity/me with a valid token returns the caller's own identity, sourced from the token's claims.
+    public async Task Me_WithValidBearerToken_ReturnsCallersOwnIdentity()
+    {
+        var client = _factory.CreateClient();
+        var loginResponse = await client.PostAsJsonAsync("/identity/login", new LoginRequestDto("admin", "Admin@12345"));
+        var loginBody = await loginResponse.Content.ReadFromJsonAsync<LoginResponseDto>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginBody!.AccessToken);
+
+        var response = await client.GetAsync("/identity/me");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<LoginUserDto>();
+        Assert.NotNull(body);
+        Assert.Equal(loginBody.User.Id, body!.Id);
+        Assert.Equal(loginBody.User.DisplayName, body.DisplayName);
+        Assert.Equal(loginBody.User.Roles, body.Roles);
+    }
 }
